@@ -1,8 +1,94 @@
 {
   "header": {
-    "title": "Image Splitter",
+    "title": "Cropio-Style AI Asset Splitter",
+    "newSession": "New Session",
+    "badgeLocal": "Processed locally",
+    "undo": "Undo (Ctrl+Z)",
+    "redo": "Redo (Ctrl+Y)",
+    "reset": "Reset",
     "help": "Help",
-    "about": "About"
+    "about": "About",
+    "assets": "assets"
+  },
+  "tools": {
+    "select": "Select box (V)",
+    "multiselect": "Multi-select (M)",
+    "draw": "Draw box (B)",
+    "hand": "Pan tool (H / Space)",
+    "delete": "Delete selected box",
+    "clearAll": "Clear all boxes"
+  },
+  "viewport": {
+    "zoomOut": "Zoom out (-)",
+    "zoomIn": "Zoom in (+)",
+    "fitScreen": "Fit screen",
+    "resetZoom": "1:1 Scale"
+  },
+  "inspector": {
+    "tabs": {
+      "region": "Region",
+      "detect": "Detect",
+      "export": "Export"
+    },
+    "region": {
+      "title": "Box Properties",
+      "noSelection": "No box selected",
+      "noSelectionTip": "Click a box on canvas or a bottom thumbnail to inspect and edit",
+      "boxLabel": "Asset #{id}",
+      "x": "X Position",
+      "y": "Y Position",
+      "w": "Width (W)",
+      "h": "Height (H)",
+      "ratio": "Aspect Ratio",
+      "padding": "Adjust Box Padding",
+      "expand2": "+2px",
+      "expand5": "+5px",
+      "shrink2": "-2px",
+      "deleteBox": "Delete this box",
+      "downloadSingle": "Download this asset"
+    },
+    "detect": {
+      "mode": "Detection Mode",
+      "cluster": "Illustration Cluster",
+      "grid": "Grid",
+      "manual": "Manual",
+      "tolerance": "Background Tolerance",
+      "boxPadding": "Box Padding",
+      "fixedSize": "Fixed Size Mode",
+      "width": "Width",
+      "height": "Height",
+      "rows": "Rows",
+      "cols": "Columns",
+      "redetect": "Re-detect",
+      "generateGrid": "Fit Grid to Image",
+      "clearGrid": "Clear Grid"
+    },
+    "export": {
+      "format": "Image Format",
+      "sizePreset": "Sizing Preset",
+      "presetOriginal": "Original sprite crop",
+      "presetSticker512": "Sticker 512px",
+      "presetIcon256": "Icon 256px",
+      "background": "Background",
+      "bgTransparent": "Transparent (Alpha)",
+      "bgWhite": "White background",
+      "prefix": "File prefix",
+      "connector": "Connector",
+      "preview": "File preview:",
+      "exportBtn": "Download All as ZIP"
+    }
+  },
+  "tray": {
+    "title": "Preview asset ({count})",
+    "subtitle": "Double-click thumbnail to download single asset",
+    "downloadZip": "Download All as ZIP",
+    "empty": "No assets created yet"
+  },
+  "dropzone": {
+    "title": "Drag & drop your AI icon sheet here, or click to browse",
+    "subtitle": "Supports PNG, JPG, WebP",
+    "sampleBtn": "Try Sample Image",
+    "security": "Processed locally — your image never leaves your browser."
   },
   "upload": {
     "main": "Drag file here or <em>click to upload</em>"
@@ -36,7 +122,8 @@
     "connector": "Connector",
     "fileNamePreview": "Preview:",
     "exportImages": "Export Images",
-    "preview": "Preview"
+    "preview": "Preview",
+    "exportSuccess": "Exported all assets successfully!"
   },
   "contextMenu": {
     "sendToBack": "Send to Back",
@@ -47,6 +134,8 @@
     "replaceConfirmMsg": "This will replace the current image and all selection boxes. Continue?",
     "clearAllConfirmTitle": "Warning",
     "clearAllConfirmMsg": "This will clear all manual and auto-detected boxes. Continue?",
+    "newSessionConfirmTitle": "New Working Session",
+    "newSessionConfirmMsg": "Do you want to close the current session and start a new one?",
     "exportErrorTitle": "Export Failed"
   },
   "errors": {
@@ -60,27 +149,20 @@
     "content": {
       "featuresList": [
         {
-          "title": "<strong>Slicing Mode</strong>:",
+          "title": "<strong>Smart Detection</strong>:",
           "items": [
-            "<strong>Box Mode</strong>: Supports <strong>auto-detection</strong> and creating selection boxes by dragging the mouse. Create, move, and resize selection boxes anywhere. Hold down the <code>Shift</code> key to maintain the aspect ratio when resizing.",
-            "<strong>Grid Mode</strong>: Quickly perform uniform grid slicing by defining a scalable grid area and the number of rows and columns."
+            "<strong>Illustration Cluster</strong>: Automatically isolates distinct sprites/icons with transparency or solid backgrounds.",
+            "<strong>Grid Mode</strong>: Evenly splits the canvas into scalable rows and columns."
           ]
         },
         {
-          "title": "<strong>Editing Operations</strong>: Supports selecting, moving, and deleting selection boxes, and resizing via 8 anchor points."
+          "title": "<strong>Workbench Tool Ribbon</strong>: Select tool (V), Multi-select (M), Draw box (B), Hand/Pan (H / Space), Delete (Delete)."
         },
         {
-          "title": "<strong>Canvas Control</strong>: Supports canvas scaling and global margin adjustment."
+          "title": "<strong>Zoom Controls</strong>: Floating widget with -, +, Fit, and 1:1, or Ctrl + Wheel."
         },
         {
-          "title": "<strong>Hotkeys</strong>: Supports common function hotkeys",
-          "items": [
-            "<strong>Delete</strong>: Use the <code>Delete</code> or <code>Backspace</code> key to delete the selected box.",
-            "<strong>Fine-tuning</strong>: Use the <code>↑</code> <code>↓</code> <code>←</code> <code>→</code> arrow keys to fine-tune the position of the selection box (1px). Hold down the <code>Shift</code> key for quick fine-tuning (10px)."
-          ]
-        },
-        {
-          "title": "<strong>Export Function</strong>: One-click packaging of all images within the selection boxes into a <code>.zip</code> compressed file for download. Supports custom prefixes and connectors for exported filenames."
+          "title": "<strong>Asset Tray</strong>: Preview individual thumbnails, click to focus, double-click to download single file."
         }
       ]
     }
@@ -97,12 +179,12 @@
   },
   "aboutDialog": {
     "title": "About",
-    "description": "A simple and efficient image splitting tool.",
-    "purpose": "Quickly and conveniently extract all independent sprites from a sprite sheet, or uniformly split an image.",
+    "description": "Modern Cropio-style AI asset and sprite sheet splitting workbench.",
+    "purpose": "Quickly extract independent icons and sprites from AI sheets or uniform grid layouts.",
     "developer": "Developer",
     "version": "Version",
     "github": "GitHub",
-    "donation": "If you find this tool helpful, you can support the developer by scanning the WeChat QR code below:",
-    "motto": "\"Your appreciation is my motivation!\""
+    "donation": "If you find this tool helpful, you can support the developer:",
+    "motto": "\"Crafting tools that spark creativity!\""
   }
 }

@@ -1,0 +1,190 @@
+{
+  "header": {
+    "title": "Cropio-Style AI Asset Splitter",
+    "newSession": "Tạo mới",
+    "badgeLocal": "Xử lý local",
+    "undo": "Hoàn tác (Ctrl+Z)",
+    "redo": "Làm lại (Ctrl+Y)",
+    "reset": "Đặt lại",
+    "help": "Trợ giúp",
+    "about": "Giới thiệu",
+    "assets": "assets"
+  },
+  "tools": {
+    "select": "Chọn box (V)",
+    "multiselect": "Chọn nhiều box (M)",
+    "draw": "Vẽ box thủ công (B)",
+    "hand": "Di chuyển canvas (H / Space)",
+    "delete": "Xóa box đã chọn",
+    "clearAll": "Xóa toàn bộ box"
+  },
+  "viewport": {
+    "zoomOut": "Thu nhỏ (-)",
+    "zoomIn": "Phóng to (+)",
+    "fitScreen": "Khớp màn hình",
+    "resetZoom": "Tỷ lệ 1:1"
+  },
+  "inspector": {
+    "tabs": {
+      "region": "Vùng chọn",
+      "detect": "Detect",
+      "export": "Export"
+    },
+    "region": {
+      "title": "Thông số Box",
+      "noSelection": "Chưa chọn box nào",
+      "noSelectionTip": "Bấm vào một box trên canvas hoặc thumbnail bên dưới để chỉnh sửa",
+      "boxLabel": "Asset #{id}",
+      "x": "Tọa độ X",
+      "y": "Tọa độ Y",
+      "w": "Chiều rộng (W)",
+      "h": "Chiều cao (H)",
+      "ratio": "Tỷ lệ",
+      "padding": "Điều chỉnh viền Padding",
+      "expand2": "+2px",
+      "expand5": "+5px",
+      "shrink2": "-2px",
+      "deleteBox": "Xóa box này",
+      "downloadSingle": "Tải riêng asset này"
+    },
+    "detect": {
+      "mode": "Chế độ phát hiện",
+      "cluster": "Cụm minh hoạ (Cluster)",
+      "grid": "Lưới (Grid)",
+      "manual": "Thủ công",
+      "tolerance": "Độ nhạy tách nền",
+      "boxPadding": "Khoảng đệm Box (Padding)",
+      "fixedSize": "Kích thước cố định",
+      "width": "Chiều rộng",
+      "height": "Chiều cao",
+      "rows": "Số hàng",
+      "cols": "Số cột",
+      "redetect": "Detect lại",
+      "generateGrid": "Tạo lưới khớp ảnh",
+      "clearGrid": "Xóa lưới"
+    },
+    "export": {
+      "format": "Định dạng ảnh",
+      "sizePreset": "Sizing Preset",
+      "presetOriginal": "Game sprite crop (Gốc)",
+      "presetSticker512": "Sticker 512px",
+      "presetIcon256": "Icon 256px",
+      "background": "Nền ảnh",
+      "bgTransparent": "Trong suốt (Alpha)",
+      "bgWhite": "Nền trắng",
+      "prefix": "Tiền tố tên file",
+      "connector": "Ký tự nối",
+      "preview": "Xem trước tên:",
+      "exportBtn": "Download All dạng ZIP"
+    }
+  },
+  "tray": {
+    "title": "Preview asset ({count})",
+    "subtitle": "Double-click thumbnail để tải riêng một asset",
+    "downloadZip": "Download All dạng ZIP",
+    "empty": "Chưa có asset nào được tạo"
+  },
+  "dropzone": {
+    "title": "Kéo thả sheet icon AI vào đây, hoặc bấm để chọn",
+    "subtitle": "Hỗ trợ PNG, JPG, WebP",
+    "sampleBtn": "Thử ảnh mẫu",
+    "security": "Processed locally — ảnh của bạn không rời khỏi trình duyệt."
+  },
+  "upload": {
+    "main": "Kéo thả sheet icon AI vào đây, hoặc <em>bấm để chọn</em>"
+  },
+  "sidebar": {
+    "edit": "Chỉnh sửa",
+    "canvasZoom": "Thu phóng",
+    "canvasPadding": "Lề Canvas",
+    "slicingMode": "Chế độ cắt",
+    "slicingModes": {
+      "custom": "Box",
+      "grid": "Lưới"
+    },
+    "recognitionMode": "Chế độ nhận diện",
+    "recognitionModes": {
+      "padding": "Padding",
+      "fixedSize": "Cố định"
+    },
+    "boxPadding": "Đệm Box",
+    "width": "Rộng",
+    "height": "Cao",
+    "autoDetect": "Tự động phát hiện",
+    "clearBoxes": "Xóa các box",
+    "rows": "Số hàng",
+    "cols": "Số cột",
+    "generateGrid": "Tạo lưới",
+    "clearGrid": "Xóa lưới",
+    "export": "Xuất file",
+    "fileNamePrefix": "Nhập tiền tố file",
+    "prefix": "Tiền tố",
+    "connector": "Ký tự nối",
+    "fileNamePreview": "Xem trước:",
+    "exportImages": "Tải toàn bộ ZIP",
+    "preview": "Xem trước",
+    "exportSuccess": "Tải toàn bộ assets thành công!"
+  },
+  "contextMenu": {
+    "sendToBack": "Đưa xuống dưới cùng",
+    "deleteBox": "Xóa box này"
+  },
+  "messages": {
+    "replaceConfirmTitle": "Cảnh báo",
+    "replaceConfirmMsg": "Thao tác này sẽ thay thế ảnh và toàn bộ vùng chọn hiện tại. Tiếp tục?",
+    "clearAllConfirmTitle": "Cảnh báo",
+    "clearAllConfirmMsg": "Thao tác này sẽ xóa tất cả các vùng chọn thủ công và tự động. Tiếp tục?",
+    "newSessionConfirmTitle": "Tạo phiên làm việc mới",
+    "newSessionConfirmMsg": "Bạn có muốn đóng phiên làm việc hiện tại để bắt đầu phiên mới không?",
+    "exportErrorTitle": "Lỗi xuất file"
+  },
+  "errors": {
+    "noSource": "Không có ảnh nguồn để xuất.",
+    "noBoxes": "Chưa có box nào để xuất trong chế độ Box.",
+    "noGrid": "Chưa có lưới nào để xuất trong chế độ Lưới.",
+    "noContent": "Không có nội dung nào để xuất."
+  },
+  "helpDialog": {
+    "title": "Hướng dẫn sử dụng",
+    "content": {
+      "featuresList": [
+        {
+          "title": "<strong>Chế độ phát hiện thông minh</strong>:",
+          "items": [
+            "<strong>Cụm minh họa (Cluster)</strong>: Tự động phân tách từng sprite/icon trên nền trong suốt hoặc đơn sắc bằng thuật toán kết nối cụm.",
+            "<strong>Lưới (Grid)</strong>: Chia đều ảnh thành các ô theo số hàng và số cột tùy chỉnh."
+          ]
+        },
+        {
+          "title": "<strong>Thanh công cụ Workbench</strong>: Chọn box (V), Chọn nhiều (M), Vẽ box (B), Di chuyển (H / Space), Xóa (Delete)."
+        },
+        {
+          "title": "<strong>Phóng to / Thu nhỏ</strong>: Nút Zoom góc phải, cuộn Ctrl + Wheel, khớp màn hình hoặc 1:1."
+        },
+        {
+          "title": "<strong>Asset Tray</strong>: Xem trước toàn bộ icon, click để chọn, double-click để tải ngay một asset."
+        }
+      ]
+    }
+  },
+  "updater": {
+    "checkUpdate": "Kiểm tra cập nhật",
+    "updateNotAvailable": "Bạn đang dùng phiên bản mới nhất.",
+    "downloadedTitle": "Đã tải bản cập nhật",
+    "downloadedMsg": "Phiên bản mới đã sẵn sàng. Khởi động lại ứng dụng để áp dụng?",
+    "updateNow": "Khởi động lại ngay",
+    "later": "Để sau",
+    "errorTitle": "Cập nhật thất bại",
+    "errorMsg": "Không thể kiểm tra cập nhật. Vui lòng thử lại sau."
+  },
+  "aboutDialog": {
+    "title": "Giới thiệu",
+    "description": "Công cụ phân tách icon và game spritesheet phong cách Cropio Workbench hiện đại.",
+    "purpose": "Nhanh chóng trích xuất các asset riêng biệt từ sheet icon AI hoặc ảnh game spritesheet.",
+    "developer": "Phát triển bởi",
+    "version": "Phiên bản",
+    "github": "GitHub",
+    "donation": "Nếu bạn thấy công cụ hữu ích, bạn có thể ủng hộ dự án:",
+    "motto": "\"Chất lượng và trải nghiệm người dùng là ưu tiên số một!\""
+  }
+}
