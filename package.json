@@ -42,6 +42,7 @@
     }
   },
   "dependencies": {
+    "@element-plus/icons-vue": "^2.3.1",
     "electron-squirrel-startup": "^1.0.1",
     "electron-updater": "^6.6.2",
     "element-plus": "^2.7.7",

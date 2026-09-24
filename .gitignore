@@ -22,3 +22,5 @@ yarn-error.log*
 icon-temp
 /icon/.icon-temp
 TODO.md
+.firebase/
+scratch/

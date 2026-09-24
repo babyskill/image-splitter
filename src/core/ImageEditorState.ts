@@ -1,11 +1,13 @@
 import JSZip from 'jszip';
+import { ImageDetector, type Box } from './ImageDetector';
 
-export interface Box {
-  id: number;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
+export type { Box } from './ImageDetector';
+
+export interface ExportOptions {
+  format?: 'png' | 'webp';
+  background?: 'transparent' | 'white';
+  sizePreset?: 'original' | 'sticker512' | 'icon256';
+  canvasPadding?: number;
 }
 
 export class ImageEditorState {
@@ -79,66 +81,141 @@ export class ImageEditorState {
     this.gridArea = null;
   }
 
-  autoDetect(imageData: ImageData, padding: number, canvasPadding: number, shouldSetFixedSize?: boolean): Box[] {
-    const { data, width, height } = imageData;
-    const visited = new Uint8Array(width * height);
-    const newBoxes: Box[] = [];
+  autoDetect(
+    imageData: ImageData,
+    padding: number,
+    canvasPadding: number,
+    shouldSetFixedSize?: boolean,
+    detectorOptions?: { borderTolerance?: number; alphaThreshold?: number }
+  ): Box[] {
+    const detected = ImageDetector.detect(imageData, {
+      padding,
+      canvasPadding,
+      fixedWidth: this.selectionWidth,
+      fixedHeight: this.selectionHeight,
+      borderTolerance: detectorOptions?.borderTolerance,
+      alphaThreshold: detectorOptions?.alphaThreshold,
+    });
 
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const index = (y * width + x);
-        if (visited[index] || data[index * 4 + 3] === 0) continue;
-
-        const queue: [number, number][] = [[x, y]];
-        visited[index] = 1;
-        let minX = x, minY = y, maxX = x, maxY = y;
-
-        while (queue.length > 0) {
-          const [curX, curY] = queue.shift()!;
-          minX = Math.min(minX, curX); minY = Math.min(minY, curY);
-          maxX = Math.max(maxX, curX); maxY = Math.max(maxY, curY);
-          const neighbors = [[curX, curY - 1], [curX, curY + 1], [curX - 1, curY], [curX + 1, curY]];
-          for (const [nx, ny] of neighbors) {
-            if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-              const neighborIndex = (ny * width + nx);
-              if (!visited[neighborIndex] && data[neighborIndex * 4 + 3] > 0) {
-                visited[neighborIndex] = 1;
-                queue.push([nx, ny]);
-              }
-            }
-          }
-        }
-
-        let boxW = (maxX - minX + 1) + padding * 2;
-        let boxH = (maxY - minY + 1) + padding * 2;
-
-        if (shouldSetFixedSize && (this.selectionWidth == null || this.selectionHeight == null)) {
-          this.selectionWidth = boxW;
-          this.selectionHeight = boxH;
-        }
-
-        if (this.selectionWidth != null && this.selectionHeight != null) {
-          boxW = this.selectionWidth;
-          boxH = this.selectionHeight;
-        }
-
-        newBoxes.push({
-          id: Date.now() + newBoxes.length,
-          x: minX - padding + canvasPadding,
-          y: minY - padding + canvasPadding,
-          w: boxW,
-          h: boxH
-        });
+    if (shouldSetFixedSize && (this.selectionWidth == null || this.selectionHeight == null)) {
+      if (detected.length > 0) {
+        this.selectionWidth = detected[0].w;
+        this.selectionHeight = detected[0].h;
       }
     }
-    this.boxes = newBoxes;
-    return newBoxes;
+
+    if (this.selectionWidth != null && this.selectionHeight != null) {
+      this.boxes = detected.map(b => ({
+        ...b,
+        w: this.selectionWidth!,
+        h: this.selectionHeight!,
+      }));
+    } else {
+      this.boxes = detected;
+    }
+
+    return this.boxes;
   }
 
-  async export(prefix: string, connector: string, slicingMode: 'custom' | 'grid', canvasPadding: number): Promise<Blob> {
+  async exportSingleBox(
+    box: Box,
+    optionsOrFormat: ExportOptions | ('png' | 'webp') = 'png',
+    canvasPadding: number = 0
+  ): Promise<Blob> {
     if (!this.sourceImage) {
       throw new Error(this.t('errors.noSource'));
     }
+
+    const options: ExportOptions = typeof optionsOrFormat === 'string'
+      ? { format: optionsOrFormat, canvasPadding }
+      : { canvasPadding, ...optionsOrFormat };
+
+    const format = options.format ?? 'png';
+    const background = options.background ?? 'transparent';
+    const sizePreset = options.sizePreset ?? 'original';
+    const pad = options.canvasPadding ?? canvasPadding;
+
+    const img = this.sourceImage;
+
+    // Calculate dimensions based on preset
+    let destW = Math.max(1, Math.round(box.w));
+    let destH = Math.max(1, Math.round(box.h));
+
+    if (sizePreset === 'sticker512') {
+      const scale = Math.min(512 / box.w, 512 / box.h);
+      destW = Math.max(1, Math.round(box.w * scale));
+      destH = Math.max(1, Math.round(box.h * scale));
+    } else if (sizePreset === 'icon256') {
+      const scale = Math.min(256 / box.w, 256 / box.h);
+      destW = Math.max(1, Math.round(box.w * scale));
+      destH = Math.max(1, Math.round(box.h * scale));
+    }
+
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = destW;
+    tempCanvas.height = destH;
+    const tempCtx = tempCanvas.getContext('2d');
+    if (!tempCtx) {
+      throw new Error('Failed to get 2d context for canvas');
+    }
+
+    if (background === 'white') {
+      tempCtx.fillStyle = '#ffffff';
+      tempCtx.fillRect(0, 0, destW, destH);
+    }
+
+    const imageRect = { x: pad, y: pad, w: img.width, h: img.height };
+    const intersectX = Math.max(box.x, imageRect.x);
+    const intersectY = Math.max(box.y, imageRect.y);
+    const intersectMaxX = Math.min(box.x + box.w, imageRect.x + imageRect.w);
+    const intersectMaxY = Math.min(box.y + box.h, imageRect.y + imageRect.h);
+    const intersectW = intersectMaxX - intersectX;
+    const intersectH = intersectMaxY - intersectY;
+
+    if (intersectW > 0 && intersectH > 0) {
+      const sourceX = intersectX - pad;
+      const sourceY = intersectY - pad;
+      const scaleX = destW / box.w;
+      const scaleY = destH / box.h;
+      const targetRelX = (intersectX - box.x) * scaleX;
+      const targetRelY = (intersectY - box.y) * scaleY;
+      const targetRelW = intersectW * scaleX;
+      const targetRelH = intersectH * scaleY;
+
+      tempCtx.imageSmoothingEnabled = true;
+      tempCtx.imageSmoothingQuality = 'high';
+      tempCtx.drawImage(img, sourceX, sourceY, intersectW, intersectH, targetRelX, targetRelY, targetRelW, targetRelH);
+    }
+
+    const mimeType = format === 'webp' ? 'image/webp' : 'image/png';
+    return new Promise<Blob>((resolve, reject) => {
+      tempCanvas.toBlob(blob => {
+        if (blob) {
+          resolve(blob);
+        } else {
+          reject(new Error(`Failed to generate ${format.toUpperCase()} blob`));
+        }
+      }, mimeType);
+    });
+  }
+
+  async export(
+    prefix: string,
+    connector: string,
+    slicingMode: 'custom' | 'grid',
+    optionsOrPadding: ExportOptions | number = 0,
+    maybeFormat: 'png' | 'webp' = 'png'
+  ): Promise<Blob> {
+    if (!this.sourceImage) {
+      throw new Error(this.t('errors.noSource'));
+    }
+
+    const options: ExportOptions = typeof optionsOrPadding === 'number'
+      ? { canvasPadding: optionsOrPadding, format: maybeFormat }
+      : optionsOrPadding;
+
+    const canvasPadding = options.canvasPadding ?? 0;
+    const format = options.format ?? 'png';
 
     let boxesToExport: Box[] = [];
     if (slicingMode === 'custom') {
@@ -167,36 +244,12 @@ export class ImageEditorState {
     }
 
     const zip = new JSZip();
-    const img = this.sourceImage;
+    const ext = format === 'webp' ? 'webp' : 'png';
 
     for (const [index, box] of boxesToExport.entries()) {
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = box.w;
-      tempCanvas.height = box.h;
-      const tempCtx = tempCanvas.getContext('2d');
-      if (!tempCtx) continue;
-
-      const imageRect = { x: canvasPadding, y: canvasPadding, w: img.width, h: img.height };
-      const intersectX = Math.max(box.x, imageRect.x);
-      const intersectY = Math.max(box.y, imageRect.y);
-      const intersectMaxX = Math.min(box.x + box.w, imageRect.x + imageRect.w);
-      const intersectMaxY = Math.min(box.y + box.h, imageRect.y + imageRect.h);
-      const intersectW = intersectMaxX - intersectX;
-      const intersectH = intersectMaxY - intersectY;
-
-      if (intersectW > 0 && intersectH > 0) {
-        const sourceX = intersectX - canvasPadding;
-        const sourceY = intersectY - canvasPadding;
-        const destX = intersectX - box.x;
-        const destY = intersectY - box.y;
-        tempCtx.drawImage(img, sourceX, sourceY, intersectW, intersectH, destX, destY, intersectW, intersectH);
-      }
-
-      const blob = await new Promise<Blob | null>(resolve => tempCanvas.toBlob(resolve, 'image/png'));
-      if (blob) {
-        const filename = `${prefix}${connector}${index + 1}.png`;
-        zip.file(filename, blob);
-      }
+      const blob = await this.exportSingleBox(box, options);
+      const filename = `${prefix}${connector}${index + 1}.${ext}`;
+      zip.file(filename, blob);
     }
 
     return zip.generateAsync({ type: 'blob' });
