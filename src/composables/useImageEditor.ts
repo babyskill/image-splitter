@@ -57,7 +57,7 @@ export function useImageEditor(t: (key: string) => string) {
   const previewMode = ref<'animation' | 'static'>('animation');
   const animationTargetRow = ref<number | 'all' | 'selected' | string>(0);
   const animationFps = ref(8); // range 1-30
-  const isPlaying = ref(true);
+  const isPlaying = ref(false);
   const currentFrameIndex = ref(0);
   let animationReqId: number | null = null;
   let lastFrameTimestamp = 0;
@@ -148,6 +148,8 @@ export function useImageEditor(t: (key: string) => string) {
     editorState.clearGrid();
     selectedBoxId.value = null;
     selectedBoxIds.value = [];
+    isPlaying.value = false;
+    currentFrameIndex.value = 0;
     fileInfo.name = '';
     fileInfo.size = 0;
     fileInfo.formattedSize = '';
@@ -875,18 +877,20 @@ export function useImageEditor(t: (key: string) => string) {
       fileInfo.width = img.width;
       fileInfo.height = img.height;
       setupCanvas(img);
+      editorState.clearBoxes();
+      editorState.clearGrid();
       selectedBoxId.value = null;
       selectedBoxIds.value = [];
+      isPlaying.value = false;
+      currentFrameIndex.value = 0;
       panOffset.x = 0;
       panOffset.y = 0;
 
       await nextTick();
       fitToScreen();
 
-      // Automatically run auto-detect on new image
-      await nextTick();
-      reapplyAutoDetect();
       saveHistory();
+      draw();
     };
 
     if (editorState.sourceImage) {
@@ -1494,7 +1498,7 @@ export function useImageEditor(t: (key: string) => string) {
   };
 
   watch(autoDetectPadding, () => {
-    if (autoDetectMode.value === 'padding' && editorState.sourceImage) {
+    if (autoDetectMode.value === 'padding' && editorState.sourceImage && editorState.boxes.length > 0) {
       reapplyAutoDetect();
     }
   });
