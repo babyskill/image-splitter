@@ -51,7 +51,7 @@
       "downloadCombined": "Tải ảnh dải gộp",
       "containsSubItems": "Chứa {count} item con bên trong",
       "assetName": "Tên file / Asset",
-      "namePlaceholder": "ví dụ: idle, walk, monster..."
+      "namePlaceholder": "ví dụ: row-1, character, item..."
     },
     "detect": {
       "mode": "Chế độ phát hiện",
@@ -71,10 +71,13 @@
       "groupByRows": "Gom nhóm theo hàng",
       "rowGroupsTooltip": "Xuất mỗi hàng thành một thư mục riêng với tên frame theo số thứ tự",
       "rowNames": "Tên nhóm hàng",
-      "applyGamePresets": "Áp dụng mẫu Game chuẩn",
-      "rowPlaceholder": "ví dụ: idle, walk, run..."
+      "rowPlaceholder": "Tên hàng (tùy chọn)..."
     },
     "export": {
+      "scope": "Phạm vi xuất",
+      "scopeAll": "Toàn bộ ảnh",
+      "scopeRow": "Theo từng Hàng",
+      "selectRow": "Chọn Hàng cần xuất",
       "format": "Định dạng ảnh",
       "sizePreset": "Sizing Preset",
       "presetOriginal": "Game sprite crop (Gốc)",
@@ -86,7 +89,8 @@
       "prefix": "Tiền tố tên file",
       "connector": "Ký tự nối",
       "preview": "Xem trước tên:",
-      "exportBtn": "Download All dạng ZIP"
+      "exportBtn": "Download All dạng ZIP",
+      "exportRowBtn": "Xuất Hàng này"
     }
   },
   "tray": {
@@ -154,7 +158,12 @@
     "nameItemPromptMsg": "Nhập tên file tải về:",
     "downloadSuccessMulti": "Đã tải về {count} item dạng ZIP thành công!",
     "downloadSuccessSingle": "Đã tải về {name} thành công!",
-    "invalidFilename": "Tên file không được chứa ký tự đặc biệt"
+    "invalidFilename": "Tên file không được chứa ký tự đặc biệt",
+    "exportRowPromptTitle": "Xuất theo Hàng (Export Row)",
+    "exportRowPromptMsg": "Nhập tên file để xuất Row {row} ({count} items):",
+    "exportRowSuccess": "Đã xuất {name}.zip ({count} items) thành công!",
+    "noRowToExport": "Không tìm thấy hàng để xuất.",
+    "noRowFrames": "Hàng này không có khung hình nào."
   },
   "errors": {
     "noSource": "Không có ảnh nguồn để xuất.",
@@ -209,7 +218,7 @@
   "rowGroupsTooltip": "Xuất mỗi hàng thành một thư mục riêng với tên frame theo số thứ tự",
   "rowNames": "Tên nhóm hàng",
   "applyGamePresets": "Áp dụng mẫu Game chuẩn",
-  "rowPlaceholder": "ví dụ: idle, walk, run...",
+  "rowPlaceholder": "Tên hàng (tùy chọn)...",
   "animation": {
     "title": "Xem trước hoạt ảnh Sprite",
     "previewModes": "Chế độ xem",

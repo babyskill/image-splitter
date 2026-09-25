@@ -51,7 +51,7 @@
       "downloadCombined": "Download combined strip image",
       "containsSubItems": "Contains {count} individual items inside",
       "assetName": "File / Asset Name",
-      "namePlaceholder": "e.g. idle, walk, monster..."
+      "namePlaceholder": "e.g. row-1, character, item..."
     },
     "detect": {
       "mode": "Detection Mode",
@@ -71,10 +71,13 @@
       "groupByRows": "Group by Rows",
       "rowGroupsTooltip": "Export each row into its own folder with frame numbered images",
       "rowNames": "Row Group Names",
-      "applyGamePresets": "Apply Game Presets",
-      "rowPlaceholder": "e.g. idle, walk, run..."
+      "rowPlaceholder": "Row name (optional)"
     },
     "export": {
+      "scope": "Export Target",
+      "scopeAll": "All Assets",
+      "scopeRow": "By Row",
+      "selectRow": "Select Row to Export",
       "format": "Image Format",
       "sizePreset": "Sizing Preset",
       "presetOriginal": "Original sprite crop",
@@ -86,7 +89,8 @@
       "prefix": "File prefix",
       "connector": "Connector",
       "preview": "File preview:",
-      "exportBtn": "Download All as ZIP"
+      "exportBtn": "Download All as ZIP",
+      "exportRowBtn": "Export This Row"
     }
   },
   "tray": {
@@ -154,7 +158,12 @@
     "nameItemPromptMsg": "Enter filename for this asset:",
     "downloadSuccessMulti": "Exported {count} items as ZIP successfully!",
     "downloadSuccessSingle": "Downloaded {name} successfully!",
-    "invalidFilename": "Filename contains invalid characters"
+    "invalidFilename": "Filename contains invalid characters",
+    "exportRowPromptTitle": "Export Row",
+    "exportRowPromptMsg": "Enter filename for Row {row} ({count} items):",
+    "exportRowSuccess": "Exported {name}.zip ({count} items) successfully!",
+    "noRowToExport": "No row available to export.",
+    "noRowFrames": "This row has no frames."
   },
   "errors": {
     "noSource": "No source image to export.",
@@ -209,7 +218,7 @@
   "rowGroupsTooltip": "Export each row into its own folder with frame numbered images",
   "rowNames": "Row Group Names",
   "applyGamePresets": "Apply Game Presets",
-  "rowPlaceholder": "e.g. idle, walk, run...",
+  "rowPlaceholder": "Row name (optional)...",
   "animation": {
     "title": "Sprite Animation Preview",
     "previewModes": "Preview Mode",

@@ -3,24 +3,7 @@ import { ImageDetector, type Box } from './ImageDetector';
 
 export type { Box } from './ImageDetector';
 
-export const STANDARD_GAME_ROW_PRESETS: string[] = [
-  'idle',
-  'walk',
-  'run',
-  'watching',
-  'attack',
-  'hurt',
-  'jump',
-  'die',
-  'climb',
-  'dance',
-  'defend',
-  'fall',
-  'dash',
-  'cast',
-  'shoot',
-  'swim',
-];
+export const STANDARD_GAME_ROW_PRESETS: string[] = [];
 
 export interface ExportOptions {
   format?: 'png' | 'webp';
@@ -38,7 +21,7 @@ export class ImageEditorState {
   gridCols: number = 2;
   selectionWidth: number | undefined = undefined;
   selectionHeight: number | undefined = undefined;
-  rowNames: string[] = ['idle', 'walk', 'run', 'watching'];
+  rowNames: string[] = [];
   enableRowGroups: boolean = true;
 
   private t: (key: string) => string;
@@ -58,16 +41,14 @@ export class ImageEditorState {
       if (i < this.rowNames.length && this.rowNames[i] !== undefined && this.rowNames[i].trim() !== '') {
         updated.push(this.rowNames[i]);
       } else {
-        updated.push(STANDARD_GAME_ROW_PRESETS[i % STANDARD_GAME_ROW_PRESETS.length] || `row${i + 1}`);
+        updated.push(`Row ${i + 1}`);
       }
     }
     this.rowNames = updated;
   }
 
   applyGamePresets() {
-    this.rowNames = Array.from({ length: this.gridRows }, (_, i) =>
-      STANDARD_GAME_ROW_PRESETS[i % STANDARD_GAME_ROW_PRESETS.length] || `row${i + 1}`
-    );
+    this.rowNames = Array.from({ length: this.gridRows }, (_, i) => `Row ${i + 1}`);
   }
 
   async loadImage(file: File): Promise<HTMLImageElement> {

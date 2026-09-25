@@ -601,15 +601,6 @@
                       <div v-if="editorState.enableRowGroups" class="row-names-container">
                         <div class="row-names-header">
                           <span class="sub-label">{{ $t('rowNames') }}</span>
-                          <el-button
-                            link
-                            type="primary"
-                            size="small"
-                            class="presets-btn"
-                            @click="applyGamePresets"
-                          >
-                            ⚡ {{ $t('applyGamePresets') }}
-                          </el-button>
                         </div>
 
                         <div class="row-inputs-list">
@@ -662,7 +653,7 @@
                       <el-option
                         v-for="(name, idx) in editorState.rowNames"
                         :key="idx"
-                        :label="`Row ${idx + 1}: ${name || 'unnamed'}`"
+                        :label="name && name.trim() && name.trim() !== `Row ${idx + 1}` ? `Row ${idx + 1}: ${name.trim()}` : `Row ${idx + 1}`"
                         :value="idx"
                       />
                       <el-option :label="`🌐 ${$t('animation.allFrames')}`" value="all" />
@@ -765,6 +756,28 @@
               </template>
 
               <div class="tab-content">
+                <!-- Export Target Scope -->
+                <div class="inspector-form-item">
+                  <label class="form-label">{{ $t('inspector.export.scope') }}</label>
+                  <el-radio-group v-model="exportScope" size="small" class="mode-segmented-group">
+                    <el-radio-button label="all">{{ $t('inspector.export.scopeAll') }}</el-radio-button>
+                    <el-radio-button label="row">{{ $t('inspector.export.scopeRow') }}</el-radio-button>
+                  </el-radio-group>
+                </div>
+
+                <!-- Select Target Row (when exporting by row) -->
+                <div v-if="exportScope === 'row'" class="inspector-form-item">
+                  <label class="form-label">{{ $t('inspector.export.selectRow') }}</label>
+                  <el-select v-model="exportSelectedRow" size="small" style="width: 100%">
+                    <el-option
+                      v-for="r in availableRows"
+                      :key="r.index"
+                      :label="r.label"
+                      :value="r.index"
+                    />
+                  </el-select>
+                </div>
+
                 <div class="inspector-form-item">
                   <label class="form-label">{{ $t('inspector.export.format') }}</label>
                   <el-radio-group v-model="exportFormat" size="small" class="mode-segmented-group">
@@ -790,7 +803,7 @@
                   </el-radio-group>
                 </div>
 
-                <div class="coords-grid">
+                <div v-if="exportScope === 'all'" class="coords-grid">
                   <div class="coord-field" style="grid-column: span 2;">
                     <label>{{ $t('inspector.export.prefix') }}</label>
                     <el-input v-model="exportPrefix" size="small" />
@@ -801,7 +814,7 @@
                   </div>
                 </div>
 
-                <div class="filename-preview-text">
+                <div v-if="exportScope === 'all'" class="filename-preview-text">
                   <span class="preview-label">{{ $t('inspector.export.preview') }}</span>
                   <code class="preview-code">{{ fileNamePreview }}</code>
                 </div>
@@ -812,7 +825,7 @@
                     <polyline points="7 10 12 15 17 10" />
                     <line x1="12" y1="15" x2="12" y2="3" />
                   </svg>
-                  <span>{{ $t('inspector.export.exportBtn') }}</span>
+                  <span>{{ exportScope === 'row' ? $t('inspector.export.exportRowBtn') : $t('inspector.export.exportBtn') }}</span>
                 </button>
               </div>
             </el-tab-pane>
@@ -974,6 +987,9 @@ const {
   exportBackground,
   exportPrefix,
   exportConnector,
+  exportScope,
+  exportSelectedRow,
+  availableRows,
   fileNamePreview,
   previewMode,
   animationTargetRow,
@@ -989,7 +1005,6 @@ const {
   nextFrame,
   prevFrame,
   resetAnimation,
-  applyGamePresets,
   downloadCurrentFrame,
   enableRowGroups,
   rowNames,
@@ -1023,6 +1038,7 @@ const {
   handleAutoDetect,
   handleClearAll,
   handleExport,
+  handleExportRow,
   downloadSingleBox,
   deleteSelectedBox,
   adjustBoxPadding,

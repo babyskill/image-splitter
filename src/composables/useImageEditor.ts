@@ -68,6 +68,8 @@ export function useImageEditor(t: (key: string) => string) {
   const exportBackground = ref<'transparent' | 'white'>('transparent');
   const exportPrefix = ref('asset');
   const exportConnector = ref('-');
+  const exportScope = ref<'all' | 'row'>('all');
+  const exportSelectedRow = ref<number>(0);
 
   // --- File Metadata ---
   const fileInfo = reactive({
@@ -276,6 +278,28 @@ export function useImageEditor(t: (key: string) => string) {
     return rows;
   });
 
+  const availableRows = computed(() => {
+    if (slicingMode.value === 'grid') {
+      if (!editorState.gridArea) return [];
+      return Array.from({ length: editorState.gridRows }, (_, r) => {
+        const customName = (editorState.rowNames[r] || '').trim();
+        const label = customName ? `Row ${r + 1}: ${customName}` : `Row ${r + 1}`;
+        return {
+          index: r,
+          label: `${label} (${editorState.gridCols} frames)`,
+          count: editorState.gridCols,
+          name: customName || `row-${r + 1}`,
+        };
+      });
+    }
+    return customRows.value.map(r => ({
+      index: r.rowIndex,
+      label: r.name,
+      count: r.boxes.length,
+      name: editorState.rowNames[r.rowIndex]?.trim() || `row-${r.rowIndex + 1}`,
+    }));
+  });
+
   // Selected boxes computation
   const selectedBoxes = computed(() => {
     if (selectedBoxIds.value.length > 1) {
@@ -318,7 +342,10 @@ export function useImageEditor(t: (key: string) => string) {
             return;
           }
         }
-        selectedBoxCustomName.value = 'idle';
+        const fallbackRowIdx = customRows.value.length > 0
+          ? customRows.value.findIndex(r => r.boxes.some(b => isEnclosingBox(newBox, b)))
+          : -1;
+        selectedBoxCustomName.value = fallbackRowIdx !== -1 ? `row-${fallbackRowIdx + 1}` : 'row-1';
         return;
       }
       if (customRows.value.length > 0) {
@@ -874,13 +901,19 @@ export function useImageEditor(t: (key: string) => string) {
   };
 
   const getBoxAt = (x: number, y: number): Box | null => {
+    const hits: Box[] = [];
     for (let i = editorState.boxes.length - 1; i >= 0; i--) {
       const box = editorState.boxes[i];
       if (box.w > 0 && box.h > 0 && x >= box.x && x <= box.x + box.w && y >= box.y && y <= box.y + box.h) {
-        return box;
+        hits.push(box);
       }
     }
-    return null;
+    if (hits.length === 0) return null;
+    if (hits.length === 1) return hits[0];
+
+    // Prioritize the smallest/innermost item so clicking inside an enclosing container selects the inner item
+    hits.sort((a, b) => (a.w * a.h) - (b.w * b.h));
+    return hits[0];
   };
 
   const getAnchorAt = (x: number, y: number, box: Box): string | null => {
@@ -1467,7 +1500,113 @@ export function useImageEditor(t: (key: string) => string) {
   });
 
   // --- Export Actions ---
+  const handleExportRow = async (targetRowIndex?: number) => {
+    try {
+      if (!editorState.sourceImage) {
+        throw new Error(t('errors.noSource') || 'Không có ảnh nguồn để xuất.');
+      }
+
+      const rows = availableRows.value;
+      if (rows.length === 0) {
+        ElMessage.warning(t('messages.noRowToExport') || 'Không tìm thấy hàng để xuất.');
+        return;
+      }
+
+      const rIdx = targetRowIndex !== undefined ? targetRowIndex : exportSelectedRow.value;
+      const rowItem = rows.find(r => r.index === rIdx) || rows[0];
+      const selectedIndex = rowItem.index;
+
+      let boxesToExport: Box[] = [];
+      if (slicingMode.value === 'grid') {
+        if (!editorState.gridArea) return;
+        const { x, y, w, h } = editorState.gridArea;
+        const cellWidth = w / editorState.gridCols;
+        const cellHeight = h / editorState.gridRows;
+        for (let c = 0; c < editorState.gridCols; c++) {
+          boxesToExport.push({
+            id: selectedIndex * editorState.gridCols + c,
+            x: x + c * cellWidth,
+            y: y + selectedIndex * cellHeight,
+            w: cellWidth,
+            h: cellHeight,
+          });
+        }
+      } else {
+        const found = customRows.value.find(r => r.rowIndex === selectedIndex);
+        if (found) {
+          boxesToExport = [...found.boxes];
+        }
+      }
+
+      if (boxesToExport.length === 0) {
+        ElMessage.warning(t('messages.noRowFrames') || 'Hàng này không có khung hình nào.');
+        return;
+      }
+
+      let defaultName = rowItem.name || `row-${selectedIndex + 1}`;
+      defaultName = defaultName.replace(/[^a-zA-Z0-9_\-]/g, '-').replace(/-+/g, '-').toLowerCase();
+      if (!defaultName || defaultName === '-') {
+        defaultName = `row-${selectedIndex + 1}`;
+      }
+
+      const promptTitle = t('messages.exportRowPromptTitle') || 'Xuất theo Hàng (Export Row)';
+      const promptMsg = t('messages.exportRowPromptMsg', { row: selectedIndex + 1, count: boxesToExport.length })
+        || `Nhập tên file để xuất Row ${selectedIndex + 1} (${boxesToExport.length} items):`;
+
+      let fileName = defaultName;
+      try {
+        const { value } = await ElMessageBox.prompt(promptMsg, promptTitle, {
+          confirmButtonText: t('common.download') || 'Tải về',
+          cancelButtonText: t('common.cancel') || 'Hủy',
+          inputValue: defaultName,
+          inputPattern: /^[a-zA-Z0-9_\-\s]+$/,
+          inputErrorMessage: t('messages.invalidFilename') || 'Tên file không được chứa ký tự đặc biệt',
+        });
+        if (value && value.trim()) {
+          fileName = value.trim();
+        }
+      } catch {
+        // User cancelled prompt
+        return;
+      }
+
+      const ext = exportFormat.value === 'webp' ? 'webp' : 'png';
+      const options: ExportOptions = {
+        format: exportFormat.value,
+        sizePreset: exportSizePreset.value,
+        background: exportBackground.value,
+        canvasPadding: canvasPadding.value,
+      };
+
+      const zip = new JSZip();
+      for (let i = 0; i < boxesToExport.length; i++) {
+        const itemBlob = await editorState.exportSingleBox(boxesToExport[i], options);
+        zip.file(`${fileName}-${i + 1}.${ext}`, itemBlob);
+      }
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${fileName}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      ElMessage.success(
+        t('messages.exportRowSuccess', { name: fileName, count: boxesToExport.length }) ||
+        `Đã xuất ${fileName}.zip (${boxesToExport.length} items) thành công!`
+      );
+    } catch (error: any) {
+      ElMessageBox.alert(error.message, t('messages.exportErrorTitle'), { type: 'error' });
+    }
+  };
+
   const handleExport = async () => {
+    if (exportScope.value === 'row') {
+      return handleExportRow(exportSelectedRow.value);
+    }
     try {
       const options: ExportOptions = {
         format: exportFormat.value,
@@ -1533,7 +1672,7 @@ export function useImageEditor(t: (key: string) => string) {
         const { value } = await ElMessageBox.prompt(promptMsg, promptTitle, {
           confirmButtonText: t('common.download') || 'Tải về',
           cancelButtonText: t('common.cancel') || 'Hủy',
-          inputValue: fileName || (itemsToExport.length > 1 ? 'idle' : `asset-${idx + 1}`),
+          inputValue: fileName || (itemsToExport.length > 1 ? 'row-1' : `asset-${idx + 1}`),
           inputPattern: /^[a-zA-Z0-9_\-\s]+$/,
           inputErrorMessage: t('messages.invalidFilename') || 'Tên file không được chứa ký tự đặc biệt',
         });
@@ -2030,6 +2169,9 @@ export function useImageEditor(t: (key: string) => string) {
     exportBackground,
     exportPrefix,
     exportConnector,
+    exportScope,
+    exportSelectedRow,
+    availableRows,
     fileNamePreview,
 
     // Animation Preview
@@ -2086,6 +2228,7 @@ export function useImageEditor(t: (key: string) => string) {
     handleClearAll,
     handleAutoDetect,
     handleExport,
+    handleExportRow,
     downloadSingleBox,
     deleteSelectedBox,
     adjustBoxPadding,
