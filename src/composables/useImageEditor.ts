@@ -1,4 +1,4 @@
-import { ref, onMounted, onUnmounted, computed, watch, nextTick, reactive, watchEffect, toRefs } from 'vue';
+import { ref, onMounted, onUnmounted, computed, watch, nextTick, reactive, watchEffect, toRefs, toRef } from 'vue';
 import type { UploadFile, DropdownInstance } from 'element-plus';
 import { ElMessageBox, ElMessage } from 'element-plus';
 import { ImageEditorState, type Box, type ExportOptions } from '../core/ImageEditorState';
@@ -13,6 +13,7 @@ export function useImageEditor(t: (key: string) => string) {
   // --- UI Elements ---
   const canvasRef = ref<HTMLCanvasElement | null>(null);
   const previewCanvasRef = ref<HTMLCanvasElement | null>(null);
+  const animationCanvasRef = ref<HTMLCanvasElement | null>(null);
   const fileInputRef = ref<HTMLInputElement | null>(null);
   const ctxRef = ref<CanvasRenderingContext2D | null>(null);
 
@@ -50,6 +51,15 @@ export function useImageEditor(t: (key: string) => string) {
   const autoDetectPadding = ref(0);
   const clusterTolerance = ref(42);
   const clusterAlpha = ref(24);
+
+  // --- Animation Preview State ---
+  const previewMode = ref<'animation' | 'static'>('animation');
+  const animationTargetRow = ref<number | 'all'>(0);
+  const animationFps = ref(8); // range 1-30
+  const isPlaying = ref(true);
+  const currentFrameIndex = ref(0);
+  let animationReqId: number | null = null;
+  let lastFrameTimestamp = 0;
 
   // --- Export State ---
   const exportFormat = ref<'png' | 'webp'>('png');
@@ -198,6 +208,66 @@ export function useImageEditor(t: (key: string) => string) {
     return editorState.boxes.findIndex(b => b.id === selectedBoxId.value);
   });
 
+  const animationFrames = computed(() => {
+    if (slicingMode.value === 'grid' && editorState.gridArea) {
+      const { x, y, w, h } = editorState.gridArea;
+      const cellW = w / editorState.gridCols;
+      const cellH = h / editorState.gridRows;
+      const frames: Array<{ x: number; y: number; w: number; h: number; rowIndex: number; colIndex: number; label: string }> = [];
+
+      if (animationTargetRow.value === 'all') {
+        for (let r = 0; r < editorState.gridRows; r++) {
+          const rowName = (editorState.rowNames[r] || '').trim() || `Row ${r + 1}`;
+          for (let c = 0; c < editorState.gridCols; c++) {
+            frames.push({
+              x: x + c * cellW,
+              y: y + r * cellH,
+              w: cellW,
+              h: cellH,
+              rowIndex: r,
+              colIndex: c,
+              label: `${rowName} #${c + 1}`,
+            });
+          }
+        }
+      } else {
+        const r = typeof animationTargetRow.value === 'number' ? animationTargetRow.value : 0;
+        const validR = Math.max(0, Math.min(r, editorState.gridRows - 1));
+        const rowName = (editorState.rowNames[validR] || '').trim() || `Row ${validR + 1}`;
+        for (let c = 0; c < editorState.gridCols; c++) {
+          frames.push({
+            x: x + c * cellW,
+            y: y + validR * cellH,
+            w: cellW,
+            h: cellH,
+            rowIndex: validR,
+            colIndex: c,
+            label: `${rowName} #${c + 1}`,
+          });
+        }
+      }
+      return frames;
+    } else if (slicingMode.value === 'custom' && editorState.boxes.length > 0) {
+      return editorState.boxes.map((b, idx) => ({
+        x: b.x,
+        y: b.y,
+        w: b.w,
+        h: b.h,
+        rowIndex: 0,
+        colIndex: idx,
+        label: `Asset #${idx + 1}`,
+      }));
+    }
+    return [];
+  });
+
+  const currentFrame = computed(() => {
+    const frames = animationFrames.value;
+    if (frames.length === 0) return null;
+    const idx = Math.min(Math.max(0, currentFrameIndex.value), frames.length - 1);
+    return frames[idx] || null;
+  });
+
   // --- Format Bytes Helper ---
   function formatBytes(bytes: number): string {
     if (bytes <= 0) return '0 B';
@@ -339,6 +409,21 @@ export function useImageEditor(t: (key: string) => string) {
         }
         ctx.setLineDash([]);
 
+        // Active Row & Frame highlight
+        if (typeof animationTargetRow.value === 'number' && animationTargetRow.value < editorState.gridRows) {
+          ctx.fillStyle = 'rgba(99, 102, 241, 0.08)';
+          ctx.fillRect(box.x, box.y + animationTargetRow.value * cellHeight, box.w, cellHeight);
+        }
+
+        const frame = currentFrame.value;
+        if (frame && frame.w > 0 && frame.h > 0) {
+          ctx.fillStyle = 'rgba(99, 102, 241, 0.22)';
+          ctx.fillRect(frame.x, frame.y, frame.w, frame.h);
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = '#6366f1';
+          ctx.strokeRect(frame.x, frame.y, frame.w, frame.h);
+        }
+
         const anchors = getAnchors(box);
         for (const key in anchors) {
           const anchor = anchors[key as keyof typeof anchors];
@@ -445,8 +530,28 @@ export function useImageEditor(t: (key: string) => string) {
     });
   });
 
+  watch(() => editorState.gridRows, (newRows) => {
+    editorState.syncRowNames(newRows);
+    if (typeof animationTargetRow.value === 'number' && animationTargetRow.value >= newRows) {
+      animationTargetRow.value = Math.max(0, newRows - 1);
+    }
+  });
+
   watch([() => editorState.gridRows, () => editorState.gridCols], () => {
     if (slicingMode.value === 'grid') draw();
+  });
+
+  watch(animationFrames, (frames) => {
+    if (frames.length === 0) {
+      currentFrameIndex.value = 0;
+    } else if (currentFrameIndex.value >= frames.length) {
+      currentFrameIndex.value = 0;
+    }
+  });
+
+  watch(animationTargetRow, () => {
+    currentFrameIndex.value = 0;
+    draw();
   });
 
   const setupCanvas = (img: HTMLImageElement) => {
@@ -670,6 +775,17 @@ export function useImageEditor(t: (key: string) => string) {
           startY.value >= editorState.gridArea.y &&
           startY.value <= editorState.gridArea.y + editorState.gridArea.h
         ) {
+          // Interactive grid canvas selection: clicking on a grid cell sets target row/frame and highlights it
+          const relX = startX.value - editorState.gridArea.x;
+          const relY = startY.value - editorState.gridArea.y;
+          const cellWidth = editorState.gridArea.w / editorState.gridCols;
+          const cellHeight = editorState.gridArea.h / editorState.gridRows;
+          const c = Math.min(Math.max(0, Math.floor(relX / cellWidth)), editorState.gridCols - 1);
+          const r = Math.min(Math.max(0, Math.floor(relY / cellHeight)), editorState.gridRows - 1);
+          animationTargetRow.value = r;
+          currentFrameIndex.value = c;
+          draw();
+
           isMoving.value = true;
           offsetX.value = startX.value - editorState.gridArea.x;
           offsetY.value = startY.value - editorState.gridArea.y;
@@ -1117,6 +1233,7 @@ export function useImageEditor(t: (key: string) => string) {
         sizePreset: exportSizePreset.value,
         background: exportBackground.value,
         canvasPadding: canvasPadding.value,
+        enableRowGroups: editorState.enableRowGroups,
       };
       const zipBlob = await editorState.export(
         exportPrefix.value,
@@ -1407,6 +1524,132 @@ export function useImageEditor(t: (key: string) => string) {
     }
   };
 
+  // --- Animation Controls & Playback Loop ---
+  const togglePlay = () => {
+    isPlaying.value = !isPlaying.value;
+  };
+
+  const nextFrame = () => {
+    isPlaying.value = false;
+    const total = animationFrames.value.length;
+    if (total > 0) {
+      currentFrameIndex.value = (currentFrameIndex.value + 1) % total;
+      draw();
+    }
+  };
+
+  const prevFrame = () => {
+    isPlaying.value = false;
+    const total = animationFrames.value.length;
+    if (total > 0) {
+      currentFrameIndex.value = (currentFrameIndex.value - 1 + total) % total;
+      draw();
+    }
+  };
+
+  const resetAnimation = () => {
+    currentFrameIndex.value = 0;
+    draw();
+  };
+
+  const applyGamePresets = () => {
+    editorState.applyGamePresets();
+  };
+
+  const downloadCurrentFrame = async () => {
+    const frame = currentFrame.value;
+    if (!frame) return;
+    try {
+      const box: Box = {
+        id: Date.now(),
+        x: frame.x,
+        y: frame.y,
+        w: frame.w,
+        h: frame.h,
+      };
+      const blob = await editorState.exportSingleBox(box, {
+        format: exportFormat.value,
+        background: exportBackground.value,
+        sizePreset: exportSizePreset.value,
+        canvasPadding: canvasPadding.value,
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const ext = exportFormat.value === 'webp' ? 'webp' : 'png';
+      const seqName = animationTargetRow.value === 'all'
+        ? 'all'
+        : (editorState.rowNames[animationTargetRow.value as number] || `row${(animationTargetRow.value as number) + 1}`);
+      a.download = `${exportPrefix.value}-${seqName}-frame${currentFrameIndex.value + 1}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      ElMessage.error(err.message || 'Download failed');
+    }
+  };
+
+  const renderAnimationFrame = () => {
+    const canvas = animationCanvasRef.value;
+    if (!canvas || !editorState.sourceImage) return;
+
+    const container = canvas.parentElement;
+    if (container && container.clientWidth > 0 && container.clientHeight > 0) {
+      if (canvas.width !== container.clientWidth || canvas.height !== container.clientHeight) {
+        canvas.width = container.clientWidth;
+        canvas.height = container.clientHeight;
+      }
+    }
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const frame = currentFrame.value;
+    if (!frame || frame.w <= 0 || frame.h <= 0) return;
+
+    ctx.imageSmoothingEnabled = false;
+
+    const pad = 16;
+    const availW = canvas.width - pad * 2;
+    const availH = canvas.height - pad * 2;
+    if (availW <= 0 || availH <= 0) return;
+
+    const scale = Math.min(availW / frame.w, availH / frame.h);
+    const drawW = Math.max(1, Math.round(frame.w * scale));
+    const drawH = Math.max(1, Math.round(frame.h * scale));
+    const drawX = Math.round((canvas.width - drawW) / 2);
+    const drawY = Math.round((canvas.height - drawH) / 2);
+
+    const padOffset = canvasPadding.value;
+    const sx = frame.x - padOffset;
+    const sy = frame.y - padOffset;
+
+    ctx.drawImage(
+      editorState.sourceImage,
+      sx, sy, frame.w, frame.h,
+      drawX, drawY, drawW, drawH
+    );
+  };
+
+  const animationLoop = (timestamp: number) => {
+    if (isPlaying.value && previewMode.value === 'animation') {
+      const fps = Math.max(1, Math.min(30, animationFps.value));
+      const interval = 1000 / fps;
+      if (timestamp - lastFrameTimestamp >= interval) {
+        lastFrameTimestamp = timestamp - ((timestamp - lastFrameTimestamp) % interval);
+        const total = animationFrames.value.length;
+        if (total > 0) {
+          currentFrameIndex.value = (currentFrameIndex.value + 1) % total;
+          draw();
+        }
+      }
+    }
+    renderAnimationFrame();
+    animationReqId = requestAnimationFrame(animationLoop);
+  };
+
   // --- Lifecycle Hooks ---
   onMounted(() => {
     const canvas = canvasRef.value;
@@ -1423,6 +1666,9 @@ export function useImageEditor(t: (key: string) => string) {
       });
       resizeObserver.observe(viewportEl);
     }
+
+    lastFrameTimestamp = performance.now();
+    animationReqId = requestAnimationFrame(animationLoop);
   });
 
   onUnmounted(() => {
@@ -1434,12 +1680,17 @@ export function useImageEditor(t: (key: string) => string) {
       resizeObserver.disconnect();
       resizeObserver = null;
     }
+    if (animationReqId !== null) {
+      cancelAnimationFrame(animationReqId);
+      animationReqId = null;
+    }
   });
 
   return {
     // Canvas & Element refs
     canvasRef,
     previewCanvasRef,
+    animationCanvasRef,
     fileInputRef,
     dropdownRef,
 
@@ -1476,6 +1727,23 @@ export function useImageEditor(t: (key: string) => string) {
     exportPrefix,
     exportConnector,
     fileNamePreview,
+
+    // Animation Preview
+    previewMode,
+    animationTargetRow,
+    animationFps,
+    isPlaying,
+    currentFrameIndex,
+    animationFrames,
+    currentFrame,
+    togglePlay,
+    nextFrame,
+    prevFrame,
+    resetAnimation,
+    applyGamePresets,
+    downloadCurrentFrame,
+    enableRowGroups: toRef(editorState, 'enableRowGroups'),
+    rowNames: toRef(editorState, 'rowNames'),
 
     // File info & History
     fileInfo,

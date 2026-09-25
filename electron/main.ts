@@ -23,26 +23,26 @@ const translations: Record<string, Record<string, string>> = {
     quit: 'Quit',
     update: 'Check for Updates...',
   },
-  'zh-CN': {
-    view: '视图',
-    reload: '刷新',
-    forceReload: '强制刷新',
-    toggleDevTools: '切换开发者工具',
-    help: '帮助',
-    about: '关于',
-    operatingGuide: '使用指南',
-    language: '语言',
-    services: '服务',
-    hide: '隐藏',
-    hideOthers: '隐藏其他',
-    unhide: '全部显示',
-    quit: '退出',
-    update: '检查更新...',
+  vi: {
+    view: 'Giao diện',
+    reload: 'Tải lại',
+    forceReload: 'Buộc tải lại',
+    toggleDevTools: 'Công cụ phát triển',
+    help: 'Trợ giúp',
+    about: 'Giới thiệu',
+    operatingGuide: 'Hướng dẫn sử dụng',
+    language: 'Ngôn ngữ',
+    services: 'Dịch vụ',
+    hide: 'Ẩn',
+    hideOthers: 'Ẩn các mục khác',
+    unhide: 'Hiện tất cả',
+    quit: 'Thoát',
+    update: 'Kiểm tra cập nhật...',
   }
 };
 
-const createMenu = (lang: 'en' | 'zh-CN' = 'zh-CN') => {
-  const t = translations[lang] || translations['zh-CN'];
+const createMenu = (lang: 'en' | 'vi' = 'en') => {
+  const t = translations[lang] || translations.en;
   const menuTemplate: (Electron.MenuItemConstructorOptions | Electron.MenuItem)[] = [
     {
       label: t.view,
@@ -82,7 +82,7 @@ const createMenu = (lang: 'en' | 'zh-CN' = 'zh-CN') => {
         { type: 'separator' },
         { label: t.language, submenu: [
           { label: 'English', type: 'radio', checked: lang === 'en', click: () => mainWindow?.webContents.send('set-language', 'en') },
-          { label: '简体中文', type: 'radio', checked: lang === 'zh-CN', click: () => mainWindow?.webContents.send('set-language', 'zh-CN') }
+          { label: 'Tiếng Việt', type: 'radio', checked: lang === 'vi', click: () => mainWindow?.webContents.send('set-language', 'vi') }
         ]},
         { type: 'separator' },
         { role: 'services', label: t.services },
@@ -127,7 +127,7 @@ const createMenu = (lang: 'en' | 'zh-CN' = 'zh-CN') => {
       label: t.language,
       submenu: [
         { label: 'English', type: 'radio', checked: lang === 'en', click: () => mainWindow?.webContents.send('set-language', 'en') },
-        { label: '简体中文', type: 'radio', checked: lang === 'zh-CN', click: () => mainWindow?.webContents.send('set-language', 'zh-CN') }
+        { label: 'Tiếng Việt', type: 'radio', checked: lang === 'vi', click: () => mainWindow?.webContents.send('set-language', 'vi') }
       ]
     };
     menuTemplate.splice(1, 0, languageMenu);
@@ -174,7 +174,7 @@ app.on('ready', () => {
   createWindow();
 
   // Create menu with system language on initial startup
-  const systemLang = app.getLocale().startsWith('zh') ? 'zh-CN' : 'en';
+  const systemLang = app.getLocale().startsWith('vi') ? 'vi' : 'en';
   createMenu(systemLang);
   
   // Check for updates on startup silently

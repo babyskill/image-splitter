@@ -111,7 +111,6 @@
               <el-dropdown-menu>
                 <el-dropdown-item command="vi" :disabled="locale === 'vi'">Tiếng Việt (VI)</el-dropdown-item>
                 <el-dropdown-item command="en" :disabled="locale === 'en'">English (EN)</el-dropdown-item>
-                <el-dropdown-item command="zh-CN" :disabled="locale === 'zh-CN'">简体中文 (ZH)</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -547,6 +546,150 @@
                       {{ $t('inspector.detect.clearGrid') }}
                     </el-button>
                   </div>
+
+                  <!-- Row Grouping Section -->
+                  <div class="row-groups-section">
+                    <div class="row-groups-header">
+                      <div class="switch-label-group">
+                        <label class="form-label" style="margin-bottom: 0;">{{ $t('groupByRows') }}</label>
+                        <el-tooltip :content="$t('rowGroupsTooltip')" placement="top">
+                          <el-icon class="info-icon"><InfoFilled /></el-icon>
+                        </el-tooltip>
+                      </div>
+                      <el-switch v-model="editorState.enableRowGroups" size="small" />
+                    </div>
+
+                    <transition name="el-zoom-in-top">
+                      <div v-if="editorState.enableRowGroups" class="row-names-container">
+                        <div class="row-names-header">
+                          <span class="sub-label">{{ $t('rowNames') }}</span>
+                          <el-button
+                            link
+                            type="primary"
+                            size="small"
+                            class="presets-btn"
+                            @click="applyGamePresets"
+                          >
+                            ⚡ {{ $t('applyGamePresets') }}
+                          </el-button>
+                        </div>
+
+                        <div class="row-inputs-list">
+                          <div
+                            v-for="(name, idx) in editorState.rowNames"
+                            :key="idx"
+                            class="row-input-item"
+                          >
+                            <span class="row-idx-badge">R{{ idx + 1 }}</span>
+                            <el-input
+                              v-model="editorState.rowNames[idx]"
+                              size="small"
+                              :placeholder="$t('rowPlaceholder')"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </transition>
+                  </div>
+                </div>
+              </div>
+            </el-tab-pane>
+
+            <!-- TAB: ANIMATION -->
+            <el-tab-pane name="animation">
+              <template #label>
+                <span class="tab-label">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="5 3 19 12 5 21 5 3" />
+                  </svg>
+                  <span>{{ $t('inspector.tabs.animation') }}</span>
+                </span>
+              </template>
+
+              <div class="tab-content animation-tab-content">
+                <!-- Mode toggle: Loop vs Static -->
+                <div class="inspector-form-item">
+                  <label class="form-label">{{ $t('animation.previewModes') }}</label>
+                  <el-radio-group v-model="previewMode" size="small" class="mode-segmented-group">
+                    <el-radio-button label="animation">🎞️ {{ $t('animation.loop') }}</el-radio-button>
+                    <el-radio-button label="static">🖼️ {{ $t('animation.static') }}</el-radio-button>
+                  </el-radio-group>
+                </div>
+
+                <!-- Sequence selector dropdown -->
+                <div v-if="slicingMode === 'grid'" class="inspector-form-item">
+                  <label class="form-label">{{ $t('animation.targetSequence') }}</label>
+                  <el-select v-model="animationTargetRow" size="small" style="width: 100%">
+                    <el-option
+                      v-for="(name, idx) in editorState.rowNames"
+                      :key="idx"
+                      :label="`Row ${idx + 1}: ${name || 'unnamed'}`"
+                      :value="idx"
+                    />
+                    <el-option :label="`🌐 ${$t('animation.allFrames')}`" value="all" />
+                  </el-select>
+                </div>
+
+                <!-- Animation Player Card -->
+                <div class="animation-player-card">
+                  <div class="animation-stage checkerboard-bg">
+                    <canvas ref="animationCanvasRef" class="animation-preview-canvas"></canvas>
+
+                    <div v-if="animationFrames.length === 0" class="no-frames-overlay">
+                      <span>{{ $t('animation.noFrames') }}</span>
+                    </div>
+
+                    <!-- Frame counter badge -->
+                    <div v-if="animationFrames.length > 0" class="frame-counter-badge">
+                      {{ $t('animation.frameCounter', { current: currentFrameIndex + 1, total: animationFrames.length }) }}
+                    </div>
+                  </div>
+
+                  <!-- Playback Controls -->
+                  <div class="playback-controls-bar">
+                    <el-button-group size="small">
+                      <el-button @click="prevFrame" :disabled="animationFrames.length <= 1" :title="$t('animation.prev')">
+                        ⏮️
+                      </el-button>
+                      <el-button
+                        type="primary"
+                        @click="togglePlay"
+                        :disabled="animationFrames.length <= 1 || previewMode === 'static'"
+                      >
+                        {{ isPlaying && previewMode === 'animation' ? '⏸️ ' + $t('animation.pause') : '▶️ ' + $t('animation.play') }}
+                      </el-button>
+                      <el-button @click="nextFrame" :disabled="animationFrames.length <= 1" :title="$t('animation.next')">
+                        ⏭️
+                      </el-button>
+                    </el-button-group>
+                  </div>
+                </div>
+
+                <!-- Speed Slider (FPS) -->
+                <div v-if="previewMode === 'animation'" class="inspector-form-item" style="margin-top: 14px;">
+                  <label class="form-label">
+                    <span>{{ $t('animation.fps') }}</span>
+                    <span class="param-val">{{ animationFps }} FPS ({{ Math.round(1000 / animationFps) }}ms)</span>
+                  </label>
+                  <el-slider v-model="animationFps" :min="1" :max="30" :step="1" size="small" />
+                </div>
+
+                <!-- Static Frame Details & Download -->
+                <div v-if="previewMode === 'static'" class="static-inspection-card">
+                  <div class="static-info-row" v-if="currentFrame">
+                    <span class="info-label">{{ $t('animation.staticDimensions') }}</span>
+                    <span class="info-val">{{ Math.round(currentFrame.w) }} × {{ Math.round(currentFrame.h) }} px</span>
+                  </div>
+                  <el-button
+                    type="primary"
+                    size="small"
+                    class="download-frame-btn"
+                    :disabled="!currentFrame"
+                    @click="downloadCurrentFrame"
+                  >
+                    <el-icon><Download /></el-icon>
+                    {{ $t('animation.downloadFrame') }}
+                  </el-button>
                 </div>
               </div>
             </el-tab-pane>
@@ -716,7 +859,6 @@ import {
   Plus,
 } from '@element-plus/icons-vue';
 import enLocale from 'element-plus/dist/locale/en.mjs';
-import zhCnLocale from 'element-plus/dist/locale/zh-cn.mjs';
 import viLocale from 'element-plus/dist/locale/vi.mjs';
 import pkg from '../package.json';
 import { useImageEditor } from './composables/useImageEditor';
@@ -735,13 +877,11 @@ const helpFeatures = computed(() => tm('helpDialog.content.featuresList') as Arr
 
 const currentLocale = computed(() => {
   if (locale.value === 'vi') return viLocale;
-  if (locale.value === 'zh-CN') return zhCnLocale;
   return enLocale;
 });
 
 const currentLangLabel = computed(() => {
   if (locale.value === 'vi') return 'VI';
-  if (locale.value === 'zh-CN') return 'ZH';
   return 'EN';
 });
 
@@ -756,6 +896,7 @@ const handleLanguageChange = (lang: string) => {
 const {
   canvasRef,
   previewCanvasRef,
+  animationCanvasRef,
   sourceImage,
   cursorStyle,
   slicingMode,
@@ -775,6 +916,21 @@ const {
   exportPrefix,
   exportConnector,
   fileNamePreview,
+  previewMode,
+  animationTargetRow,
+  animationFps,
+  isPlaying,
+  currentFrameIndex,
+  animationFrames,
+  currentFrame,
+  togglePlay,
+  nextFrame,
+  prevFrame,
+  resetAnimation,
+  applyGamePresets,
+  downloadCurrentFrame,
+  enableRowGroups,
+  rowNames,
   fileInfo,
   canUndo,
   canRedo,
@@ -2111,6 +2267,223 @@ body,
   color: #94a3b8;
   font-style: italic;
   padding: 12px;
+}
+
+/* ROW GROUPS */
+.row-groups-section {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.is-dark .row-groups-section {
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+.row-groups-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.switch-label-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.switch-label-group .info-icon {
+  font-size: 14px;
+  color: #94a3b8;
+  cursor: help;
+}
+
+.row-names-container {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.row-names-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sub-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.is-dark .sub-label {
+  color: #94a3b8;
+}
+
+.presets-btn {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  padding: 0 !important;
+  height: auto !important;
+}
+
+.row-inputs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.row-input-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.row-idx-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #6366f1;
+  background-color: rgba(99, 102, 241, 0.1);
+  padding: 3px 6px;
+  border-radius: 4px;
+  min-width: 28px;
+  text-align: center;
+}
+
+.is-dark .row-idx-badge {
+  color: #a5b4fc;
+  background-color: rgba(129, 140, 248, 0.16);
+}
+
+/* ANIMATION PLAYER */
+.animation-tab-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.animation-player-card {
+  margin-top: 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+  background-color: #f8fafc;
+}
+
+.is-dark .animation-player-card {
+  border-color: rgba(255, 255, 255, 0.08);
+  background-color: #0f172a;
+}
+
+.animation-stage {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.animation-preview-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.no-frames-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  text-align: center;
+  font-size: 12px;
+  color: #94a3b8;
+  background-color: rgba(255, 255, 255, 0.8);
+}
+
+.is-dark .no-frames-overlay {
+  background-color: rgba(15, 23, 42, 0.85);
+  color: #64748b;
+}
+
+.frame-counter-badge {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background-color: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(4px);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.playback-controls-bar {
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-top: 1px solid #e2e8f0;
+  background-color: #ffffff;
+}
+
+.is-dark .playback-controls-bar {
+  border-top-color: rgba(255, 255, 255, 0.08);
+  background-color: #1e293b;
+}
+
+.static-inspection-card {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.static-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background-color: #f1f5f9;
+  font-size: 12px;
+}
+
+.is-dark .static-info-row {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.static-info-row .info-label {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.is-dark .static-info-row .info-label {
+  color: #94a3b8;
+}
+
+.static-info-row .info-val {
+  font-weight: 600;
+  color: #334155;
+  font-family: monospace;
+}
+
+.is-dark .static-info-row .info-val {
+  color: #e2e8f0;
+}
+
+.download-frame-btn {
+  width: 100%;
 }
 
 @media (max-width: 900px) {

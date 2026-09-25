@@ -28,6 +28,7 @@
     "tabs": {
       "region": "Vùng chọn",
       "detect": "Detect",
+      "animation": "Hoạt ảnh",
       "export": "Export"
     },
     "region": {
@@ -61,7 +62,12 @@
       "cols": "Số cột",
       "redetect": "Detect lại",
       "generateGrid": "Tạo lưới khớp ảnh",
-      "clearGrid": "Xóa lưới"
+      "clearGrid": "Xóa lưới",
+      "groupByRows": "Gom nhóm theo hàng",
+      "rowGroupsTooltip": "Xuất mỗi hàng thành một thư mục riêng với tên frame theo số thứ tự",
+      "rowNames": "Tên nhóm hàng",
+      "applyGamePresets": "Áp dụng mẫu Game chuẩn",
+      "rowPlaceholder": "ví dụ: idle, walk, run..."
     },
     "export": {
       "format": "Định dạng ảnh",
@@ -186,5 +192,28 @@
     "github": "GitHub",
     "donation": "Nếu bạn thấy công cụ hữu ích, bạn có thể ủng hộ dự án:",
     "motto": "\"Chất lượng và trải nghiệm người dùng là ưu tiên số một!\""
+  },
+  "groupByRows": "Gom nhóm theo hàng",
+  "rowGroupsTooltip": "Xuất mỗi hàng thành một thư mục riêng với tên frame theo số thứ tự",
+  "rowNames": "Tên nhóm hàng",
+  "applyGamePresets": "Áp dụng mẫu Game chuẩn",
+  "rowPlaceholder": "ví dụ: idle, walk, run...",
+  "animation": {
+    "title": "Xem trước hoạt ảnh Sprite",
+    "previewModes": "Chế độ xem",
+    "loop": "Vòng lặp hoạt ảnh",
+    "static": "Khung hình tĩnh",
+    "targetSequence": "Chuỗi hoạt ảnh / Hàng",
+    "allFrames": "Tất cả các khung (Toàn bộ)",
+    "fps": "Tốc độ phát (FPS)",
+    "frameCounter": "Khung hình {current} / {total}",
+    "play": "Phát",
+    "pause": "Tạm dừng",
+    "prev": "Khung trước",
+    "next": "Khung kế tiếp",
+    "staticDimensions": "Kích thước khung hình",
+    "downloadFrame": "Tải khung hình này",
+    "noFrames": "Chưa có khung hình để xem trước. Hãy tạo lưới hoặc vẽ vùng chọn."
   }
 }
+
