@@ -28,6 +28,7 @@
     "tabs": {
       "region": "Region",
       "detect": "Detect",
+      "animation": "Animation",
       "export": "Export"
     },
     "region": {
@@ -61,7 +62,12 @@
       "cols": "Columns",
       "redetect": "Re-detect",
       "generateGrid": "Fit Grid to Image",
-      "clearGrid": "Clear Grid"
+      "clearGrid": "Clear Grid",
+      "groupByRows": "Group by Rows",
+      "rowGroupsTooltip": "Export each row into its own folder with frame numbered images",
+      "rowNames": "Row Group Names",
+      "applyGamePresets": "Apply Game Presets",
+      "rowPlaceholder": "e.g. idle, walk, run..."
     },
     "export": {
       "format": "Image Format",
@@ -186,5 +192,27 @@
     "github": "GitHub",
     "donation": "If you find this tool helpful, you can support the developer:",
     "motto": "\"Crafting tools that spark creativity!\""
+  },
+  "groupByRows": "Group by Rows",
+  "rowGroupsTooltip": "Export each row into its own folder with frame numbered images",
+  "rowNames": "Row Group Names",
+  "applyGamePresets": "Apply Game Presets",
+  "rowPlaceholder": "e.g. idle, walk, run...",
+  "animation": {
+    "title": "Sprite Animation Preview",
+    "previewModes": "Preview Mode",
+    "loop": "Animation Loop",
+    "static": "Static Frame",
+    "targetSequence": "Sequence / Row",
+    "allFrames": "All Frames (Full Sheet)",
+    "fps": "Playback Speed (FPS)",
+    "frameCounter": "Frame {current} / {total}",
+    "play": "Play",
+    "pause": "Pause",
+    "prev": "Previous Frame",
+    "next": "Next Frame",
+    "staticDimensions": "Frame Dimensions",
+    "downloadFrame": "Download Frame",
+    "noFrames": "No frames available to preview. Create grid or select boxes."
   }
 }

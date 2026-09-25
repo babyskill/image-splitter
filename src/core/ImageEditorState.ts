@@ -3,11 +3,31 @@ import { ImageDetector, type Box } from './ImageDetector';
 
 export type { Box } from './ImageDetector';
 
+export const STANDARD_GAME_ROW_PRESETS: string[] = [
+  'idle',
+  'walk',
+  'run',
+  'watching',
+  'attack',
+  'hurt',
+  'jump',
+  'die',
+  'climb',
+  'dance',
+  'defend',
+  'fall',
+  'dash',
+  'cast',
+  'shoot',
+  'swim',
+];
+
 export interface ExportOptions {
   format?: 'png' | 'webp';
   background?: 'transparent' | 'white';
   sizePreset?: 'original' | 'sticker512' | 'icon256';
   canvasPadding?: number;
+  enableRowGroups?: boolean;
 }
 
 export class ImageEditorState {
@@ -18,11 +38,36 @@ export class ImageEditorState {
   gridCols: number = 2;
   selectionWidth: number | undefined = undefined;
   selectionHeight: number | undefined = undefined;
+  rowNames: string[] = ['idle', 'walk', 'run', 'watching'];
+  enableRowGroups: boolean = true;
 
   private t: (key: string) => string;
 
   constructor(t: (key: string) => string) {
     this.t = t;
+    this.syncRowNames(this.gridRows);
+  }
+
+  syncRowNames(rows: number) {
+    if (rows <= 0) {
+      this.rowNames = [];
+      return;
+    }
+    const updated: string[] = [];
+    for (let i = 0; i < rows; i++) {
+      if (i < this.rowNames.length && this.rowNames[i] !== undefined && this.rowNames[i].trim() !== '') {
+        updated.push(this.rowNames[i]);
+      } else {
+        updated.push(STANDARD_GAME_ROW_PRESETS[i % STANDARD_GAME_ROW_PRESETS.length] || `row${i + 1}`);
+      }
+    }
+    this.rowNames = updated;
+  }
+
+  applyGamePresets() {
+    this.rowNames = Array.from({ length: this.gridRows }, (_, i) =>
+      STANDARD_GAME_ROW_PRESETS[i % STANDARD_GAME_ROW_PRESETS.length] || `row${i + 1}`
+    );
   }
 
   async loadImage(file: File): Promise<HTMLImageElement> {
@@ -64,6 +109,7 @@ export class ImageEditorState {
   setGrid(rows: number, cols: number) {
     this.gridRows = rows;
     this.gridCols = cols;
+    this.syncRowNames(rows);
   }
 
   fitGridToImage(padding: number) {
@@ -214,39 +260,48 @@ export class ImageEditorState {
       ? { canvasPadding: optionsOrPadding, format: maybeFormat }
       : optionsOrPadding;
 
-    const canvasPadding = options.canvasPadding ?? 0;
     const format = options.format ?? 'png';
+    const enableRowGroups = options.enableRowGroups !== undefined ? options.enableRowGroups : this.enableRowGroups;
 
-    let boxesToExport: Box[] = [];
-    if (slicingMode === 'custom') {
-      if (this.boxes.length === 0) throw new Error(this.t('errors.noBoxes'));
-      boxesToExport = this.boxes;
-    } else if (slicingMode === 'grid') {
+    if (slicingMode === 'grid') {
       if (!this.gridArea) throw new Error(this.t('errors.noGrid'));
       const { x, y, w, h } = this.gridArea;
       const cellWidth = w / this.gridCols;
       const cellHeight = h / this.gridRows;
+      const zip = new JSZip();
+      const ext = format === 'webp' ? 'webp' : 'png';
+
       for (let i = 0; i < this.gridRows; i++) {
+        const folderName = (this.rowNames[i] || '').trim() || `${prefix}${connector}row${i + 1}`;
         for (let j = 0; j < this.gridCols; j++) {
-          boxesToExport.push({
+          const box: Box = {
             id: i * this.gridCols + j,
             x: x + j * cellWidth,
             y: y + i * cellHeight,
             w: cellWidth,
             h: cellHeight,
-          });
+          };
+          const blob = await this.exportSingleBox(box, options);
+          if (enableRowGroups) {
+            zip.file(`${folderName}/${j + 1}.${ext}`, blob);
+          } else {
+            const index = i * this.gridCols + j;
+            const filename = `${prefix}${connector}${index + 1}.${ext}`;
+            zip.file(filename, blob);
+          }
         }
       }
+      return zip.generateAsync({ type: 'blob' });
     }
 
-    if (boxesToExport.length === 0) {
-      throw new Error(this.t('errors.noContent'));
+    if (this.boxes.length === 0) {
+      throw new Error(this.t('errors.noBoxes'));
     }
 
     const zip = new JSZip();
     const ext = format === 'webp' ? 'webp' : 'png';
 
-    for (const [index, box] of boxesToExport.entries()) {
+    for (const [index, box] of this.boxes.entries()) {
       const blob = await this.exportSingleBox(box, options);
       const filename = `${prefix}${connector}${index + 1}.${ext}`;
       zip.file(filename, blob);
