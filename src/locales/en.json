@@ -46,7 +46,12 @@
       "expand5": "+5px",
       "shrink2": "-2px",
       "deleteBox": "Delete this box",
-      "downloadSingle": "Download this asset"
+      "downloadSingle": "Download this asset",
+      "downloadItemsZip": "Download {count} items in selection (ZIP)",
+      "downloadCombined": "Download combined strip image",
+      "containsSubItems": "Contains {count} individual items inside",
+      "assetName": "File / Asset Name",
+      "namePlaceholder": "e.g. idle, walk, monster..."
     },
     "detect": {
       "mode": "Detection Mode",
@@ -142,7 +147,14 @@
     "clearAllConfirmMsg": "This will clear all manual and auto-detected boxes. Continue?",
     "newSessionConfirmTitle": "New Working Session",
     "newSessionConfirmMsg": "Do you want to close the current session and start a new one?",
-    "exportErrorTitle": "Export Failed"
+    "exportErrorTitle": "Export Failed",
+    "nameItemsPromptTitle": "Name Selected Items",
+    "nameItemsPromptMsg": "Found {count} items in selection. Enter prefix name:",
+    "nameItemPromptTitle": "Name Asset File",
+    "nameItemPromptMsg": "Enter filename for this asset:",
+    "downloadSuccessMulti": "Exported {count} items as ZIP successfully!",
+    "downloadSuccessSingle": "Downloaded {name} successfully!",
+    "invalidFilename": "Filename contains invalid characters"
   },
   "errors": {
     "noSource": "No source image to export.",

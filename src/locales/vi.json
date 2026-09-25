@@ -46,7 +46,12 @@
       "expand5": "+5px",
       "shrink2": "-2px",
       "deleteBox": "Xóa box này",
-      "downloadSingle": "Tải riêng asset này"
+      "downloadSingle": "Tải riêng asset này",
+      "downloadItemsZip": "Tải {count} item trong vùng chọn (ZIP)",
+      "downloadCombined": "Tải ảnh dải gộp",
+      "containsSubItems": "Chứa {count} item con bên trong",
+      "assetName": "Tên file / Asset",
+      "namePlaceholder": "ví dụ: idle, walk, monster..."
     },
     "detect": {
       "mode": "Chế độ phát hiện",
@@ -142,7 +147,14 @@
     "clearAllConfirmMsg": "Thao tác này sẽ xóa tất cả các vùng chọn thủ công và tự động. Tiếp tục?",
     "newSessionConfirmTitle": "Tạo phiên làm việc mới",
     "newSessionConfirmMsg": "Bạn có muốn đóng phiên làm việc hiện tại để bắt đầu phiên mới không?",
-    "exportErrorTitle": "Lỗi xuất file"
+    "exportErrorTitle": "Lỗi xuất file",
+    "nameItemsPromptTitle": "Đặt tên cho các item tải về",
+    "nameItemsPromptMsg": "Phát hiện {count} item trong vùng chọn. Nhập tên tiền tố (prefix):",
+    "nameItemPromptTitle": "Đặt tên file tải về",
+    "nameItemPromptMsg": "Nhập tên file tải về:",
+    "downloadSuccessMulti": "Đã tải về {count} item dạng ZIP thành công!",
+    "downloadSuccessSingle": "Đã tải về {name} thành công!",
+    "invalidFilename": "Tên file không được chứa ký tự đặc biệt"
   },
   "errors": {
     "noSource": "Không có ảnh nguồn để xuất.",

@@ -417,15 +417,53 @@
                     </div>
                   </div>
 
+                  <!-- Custom Asset Name Field -->
+                  <div class="inspector-form-item" style="margin-top: 12px; margin-bottom: 8px;">
+                    <label class="form-label">{{ $t('inspector.region.assetName') }}</label>
+                    <el-input
+                      v-model="selectedBoxCustomName"
+                      size="small"
+                      :placeholder="$t('inspector.region.namePlaceholder')"
+                      clearable
+                    />
+                  </div>
+
+                  <!-- Badge if selection encloses multiple sub-items -->
+                  <div v-if="enclosedBoxesCount > 1" class="sub-items-info-badge" style="margin-bottom: 10px; padding: 6px 10px; background: rgba(99, 102, 241, 0.08); border: 1px dashed rgba(99, 102, 241, 0.3); border-radius: 6px; font-size: 12px; color: #4338ca; display: flex; align-items: center; gap: 6px;">
+                    <el-icon><InfoFilled /></el-icon>
+                    <span>{{ $t('inspector.region.containsSubItems', { count: enclosedBoxesCount }) }}</span>
+                  </div>
+
                   <div class="region-footer-actions">
-                    <el-button
-                      type="primary"
-                      class="download-single-btn"
-                      @click="downloadSingleBox(selectedBox, selectedBoxIndex)"
-                    >
-                      <el-icon><Download /></el-icon>
-                      {{ $t('inspector.region.downloadSingle') }}
-                    </el-button>
+                    <template v-if="enclosedBoxesCount > 1">
+                      <el-button
+                        type="primary"
+                        class="download-single-btn"
+                        @click="downloadSingleBox(selectedBox, selectedBoxIndex, false)"
+                      >
+                        <el-icon><Download /></el-icon>
+                        {{ $t('inspector.region.downloadItemsZip', { count: enclosedBoxesCount }) }}
+                      </el-button>
+                      <el-button
+                        link
+                        type="info"
+                        size="small"
+                        style="width: 100%; margin-left: 0; margin-top: 4px; font-size: 11px;"
+                        @click="downloadSingleBox(selectedBox, selectedBoxIndex, true)"
+                      >
+                        {{ $t('inspector.region.downloadCombined') }}
+                      </el-button>
+                    </template>
+                    <template v-else>
+                      <el-button
+                        type="primary"
+                        class="download-single-btn"
+                        @click="downloadSingleBox(selectedBox, selectedBoxIndex)"
+                      >
+                        <el-icon><Download /></el-icon>
+                        {{ $t('inspector.region.downloadSingle') }}
+                      </el-button>
+                    </template>
 
                     <el-button
                       type="danger"
@@ -926,6 +964,8 @@ const {
   selectedBoxId,
   selectedBox,
   selectedBoxIndex,
+  selectedBoxCustomName,
+  enclosedBoxesCount,
   clusterTolerance,
   autoDetectPadding,
   autoDetectMode,

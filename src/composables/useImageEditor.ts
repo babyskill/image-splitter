@@ -2,6 +2,7 @@ import { ref, onMounted, onUnmounted, computed, watch, nextTick, reactive, watch
 import type { UploadFile, DropdownInstance } from 'element-plus';
 import { ElMessageBox, ElMessage } from 'element-plus';
 import { ImageEditorState, type Box, type ExportOptions } from '../core/ImageEditorState';
+import JSZip from 'jszip';
 
 export type ToolType = 'select' | 'multiselect' | 'draw' | 'hand' | 'delete';
 export type DetectionMode = 'cluster' | 'grid' | 'manual';
@@ -296,6 +297,41 @@ export function useImageEditor(t: (key: string) => string) {
       return [box];
     }
     return [];
+  });
+
+  const selectedBoxCustomName = ref('');
+
+  const enclosedBoxesCount = computed(() => {
+    if (!selectedBox.value) return 0;
+    return getEnclosedBoxes(selectedBox.value).length;
+  });
+
+  watch(selectedBox, (newBox) => {
+    if (newBox) {
+      const idx = selectedBoxIndex.value;
+      const enclosed = getEnclosedBoxes(newBox);
+      if (enclosed.length > 1) {
+        if (customRows.value.length > 0) {
+          const rowIdx = customRows.value.findIndex(r => r.boxes.some(b => isEnclosingBox(newBox, b)));
+          if (rowIdx !== -1 && editorState.rowNames[rowIdx]) {
+            selectedBoxCustomName.value = editorState.rowNames[rowIdx].trim();
+            return;
+          }
+        }
+        selectedBoxCustomName.value = 'idle';
+        return;
+      }
+      if (customRows.value.length > 0) {
+        const rowIdx = customRows.value.findIndex(r => r.boxes.some(b => b.id === newBox.id));
+        if (rowIdx !== -1 && editorState.rowNames[rowIdx]) {
+          selectedBoxCustomName.value = editorState.rowNames[rowIdx].trim();
+          return;
+        }
+      }
+      selectedBoxCustomName.value = `asset-${idx + 1}`;
+    } else {
+      selectedBoxCustomName.value = '';
+    }
   });
 
   const animationFrames = computed(() => {
@@ -1460,26 +1496,87 @@ export function useImageEditor(t: (key: string) => string) {
     }
   };
 
-  const downloadSingleBox = async (box: Box, index?: number) => {
+  const downloadSingleBox = async (box: Box, index?: number, forceCombined: boolean = false) => {
     try {
       const idx = index !== undefined ? index : editorState.boxes.indexOf(box);
+      const ext = exportFormat.value === 'webp' ? 'webp' : 'png';
       const options: ExportOptions = {
         format: exportFormat.value,
         sizePreset: exportSizePreset.value,
         background: exportBackground.value,
         canvasPadding: canvasPadding.value,
       };
-      const blob = await editorState.exportSingleBox(box, options);
-      const ext = exportFormat.value === 'webp' ? 'webp' : 'png';
-      const a = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      a.href = url;
-      a.download = `${exportPrefix.value}${exportConnector.value}${idx + 1}.${ext}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      ElMessage.success(`Tải asset #${idx + 1} thành công!`);
+
+      // Check if this box encloses multiple sub-items or if multiple boxes are selected
+      let itemsToExport: Box[] = [];
+      if (!forceCombined) {
+        if (selectedBoxIds.value.length > 1) {
+          itemsToExport = selectedBoxes.value;
+        } else {
+          const enclosed = getEnclosedBoxes(box);
+          if (enclosed.length > 1) {
+            itemsToExport = enclosed.sort((a, b) => a.x - b.x);
+          }
+        }
+      }
+
+      // Prepare naming prompt
+      let fileName = (selectedBoxCustomName.value || '').trim();
+      const promptTitle = itemsToExport.length > 1
+        ? (t('messages.nameItemsPromptTitle') || 'Đặt tên cho các item tải về')
+        : (t('messages.nameItemPromptTitle') || 'Đặt tên file tải về');
+      const promptMsg = itemsToExport.length > 1
+        ? (t('messages.nameItemsPromptMsg', { count: itemsToExport.length }) || `Phát hiện ${itemsToExport.length} item trong vùng chọn. Nhập tên tiền tố (prefix):`)
+        : (t('messages.nameItemPromptMsg') || 'Nhập tên file tải về:');
+
+      try {
+        const { value } = await ElMessageBox.prompt(promptMsg, promptTitle, {
+          confirmButtonText: t('common.download') || 'Tải về',
+          cancelButtonText: t('common.cancel') || 'Hủy',
+          inputValue: fileName || (itemsToExport.length > 1 ? 'idle' : `asset-${idx + 1}`),
+          inputPattern: /^[a-zA-Z0-9_\-\s]+$/,
+          inputErrorMessage: t('messages.invalidFilename') || 'Tên file không được chứa ký tự đặc biệt',
+        });
+        if (value && value.trim()) {
+          fileName = value.trim();
+          selectedBoxCustomName.value = fileName;
+        }
+      } catch {
+        // User cancelled prompt
+        return;
+      }
+
+      if (itemsToExport.length > 1) {
+        // Export multiple individual items as a ZIP archive
+        const zip = new JSZip();
+        for (let i = 0; i < itemsToExport.length; i++) {
+          const itemBlob = await editorState.exportSingleBox(itemsToExport[i], options);
+          zip.file(`${fileName}-${i + 1}.${ext}`, itemBlob);
+        }
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+        const url = URL.createObjectURL(zipBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${fileName}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        ElMessage.success(t('messages.downloadSuccessMulti', { count: itemsToExport.length }) || `Đã tải về ${itemsToExport.length} item dạng ZIP thành công!`);
+      } else {
+        // Export single item
+        const blob = await editorState.exportSingleBox(box, options);
+        const ext = exportFormat.value === 'webp' ? 'webp' : 'png';
+        const a = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        a.href = url;
+        a.download = `${fileName}.${ext}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        ElMessage.success(t('messages.downloadSuccessSingle', { name: fileName }) || `Đã tải về ${fileName}.${ext} thành công!`);
+      }
     } catch (error: any) {
       ElMessageBox.alert(error.message, t('messages.exportErrorTitle'), { type: 'error' });
     }
@@ -1905,6 +2002,8 @@ export function useImageEditor(t: (key: string) => string) {
     selectedBoxIds,
     selectedBox,
     selectedBoxIndex,
+    selectedBoxCustomName,
+    enclosedBoxesCount,
 
     // UI & Pan/Zoom
     isFitMode,
