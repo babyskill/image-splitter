@@ -204,6 +204,7 @@
     "loop": "Vòng lặp hoạt ảnh",
     "static": "Khung hình tĩnh",
     "targetSequence": "Chuỗi hoạt ảnh / Hàng",
+    "selectedBoxes": "Vùng chọn hiện tại",
     "allFrames": "Tất cả các khung (Toàn bộ)",
     "fps": "Tốc độ phát (FPS)",
     "frameCounter": "Khung hình {current} / {total}",

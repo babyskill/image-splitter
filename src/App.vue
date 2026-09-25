@@ -617,16 +617,35 @@
                 </div>
 
                 <!-- Sequence selector dropdown -->
-                <div v-if="slicingMode === 'grid'" class="inspector-form-item">
+                <div class="inspector-form-item">
                   <label class="form-label">{{ $t('animation.targetSequence') }}</label>
                   <el-select v-model="animationTargetRow" size="small" style="width: 100%">
-                    <el-option
-                      v-for="(name, idx) in editorState.rowNames"
-                      :key="idx"
-                      :label="`Row ${idx + 1}: ${name || 'unnamed'}`"
-                      :value="idx"
-                    />
-                    <el-option :label="`🌐 ${$t('animation.allFrames')}`" value="all" />
+                    <template v-if="slicingMode === 'grid'">
+                      <el-option
+                        v-for="(name, idx) in editorState.rowNames"
+                        :key="idx"
+                        :label="`Row ${idx + 1}: ${name || 'unnamed'}`"
+                        :value="idx"
+                      />
+                      <el-option :label="`🌐 ${$t('animation.allFrames')}`" value="all" />
+                    </template>
+                    <template v-else>
+                      <el-option
+                        v-if="selectedBoxes.length > 0"
+                        :label="`🎯 ${$t('animation.selectedBoxes')} (${selectedBoxes.length} frames)`"
+                        value="selected"
+                      />
+                      <el-option
+                        v-for="row in customRows"
+                        :key="row.rowIndex"
+                        :label="row.name"
+                        :value="row.rowIndex"
+                      />
+                      <el-option
+                        :label="`🌐 ${$t('animation.allFrames')} (${leafBoxes.length} frames)`"
+                        value="all"
+                      />
+                    </template>
                   </el-select>
                 </div>
 
@@ -923,6 +942,9 @@ const {
   currentFrameIndex,
   animationFrames,
   currentFrame,
+  customRows,
+  selectedBoxes,
+  leafBoxes,
   togglePlay,
   nextFrame,
   prevFrame,
@@ -1744,6 +1766,8 @@ body,
   flex-direction: column;
   flex-shrink: 0;
   z-index: 20;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .is-dark .inspector-panel {
@@ -1759,6 +1783,7 @@ body,
   padding: 8px 12px;
   background-color: #f8fafc;
   border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
 }
 
 .is-dark .inspector-top-bar {
@@ -1808,15 +1833,18 @@ body,
 }
 
 .inspector-tabs {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .inspector-tabs .el-tabs__header {
   margin: 0;
   padding: 0 8px;
   border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
 }
 
 .is-dark .inspector-tabs .el-tabs__header {
@@ -1837,8 +1865,13 @@ body,
 
 .inspector-tabs .el-tabs__content {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: 16px;
+  padding: 16px 16px 28px;
+}
+
+.inspector-tabs .el-tab-pane {
+  min-height: 100%;
 }
 
 .tab-content {
@@ -1942,7 +1975,7 @@ body,
 
 .preview-card-wrap {
   width: 100%;
-  height: 120px;
+  height: 110px;
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid #e2e8f0;
@@ -1965,6 +1998,7 @@ body,
   flex-direction: column;
   gap: 8px;
   margin-top: 8px;
+  padding-bottom: 12px;
 }
 
 .download-single-btn {

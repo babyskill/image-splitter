@@ -54,7 +54,7 @@ export function useImageEditor(t: (key: string) => string) {
 
   // --- Animation Preview State ---
   const previewMode = ref<'animation' | 'static'>('animation');
-  const animationTargetRow = ref<number | 'all'>(0);
+  const animationTargetRow = ref<number | 'all' | 'selected' | string>(0);
   const animationFps = ref(8); // range 1-30
   const isPlaying = ref(true);
   const currentFrameIndex = ref(0);
@@ -208,6 +208,96 @@ export function useImageEditor(t: (key: string) => string) {
     return editorState.boxes.findIndex(b => b.id === selectedBoxId.value);
   });
 
+  // Helper to determine if box A encloses box B
+  const isEnclosingBox = (parent: Box, candidate: Box): boolean => {
+    if (parent.id === candidate.id) return false;
+    const centerX = candidate.x + candidate.w / 2;
+    const centerY = candidate.y + candidate.h / 2;
+    return (
+      centerX >= parent.x - 2 &&
+      centerX <= parent.x + parent.w + 2 &&
+      centerY >= parent.y - 2 &&
+      centerY <= parent.y + parent.h + 2
+    );
+  };
+
+  // Find boxes enclosed by a specific box
+  const getEnclosedBoxes = (parent: Box): Box[] => {
+    return editorState.boxes.filter(b => isEnclosingBox(parent, b));
+  };
+
+  // Leaf boxes (boxes that do NOT enclose multiple other boxes)
+  const leafBoxes = computed(() => {
+    return editorState.boxes.filter(b => {
+      const enclosed = getEnclosedBoxes(b);
+      return enclosed.length < 2;
+    });
+  });
+
+  // Clustered rows for custom mode
+  const customRows = computed(() => {
+    if (slicingMode.value !== 'custom' || leafBoxes.value.length === 0) return [];
+
+    const sorted = [...leafBoxes.value].sort((a, b) => a.y - b.y);
+    const rows: Array<{ rowIndex: number; name: string; boxes: Box[] }> = [];
+
+    for (const box of sorted) {
+      let placed = false;
+      const boxCenterY = box.y + box.h / 2;
+      for (const r of rows) {
+        const avgCenterY = r.boxes.reduce((sum, b) => sum + (b.y + b.h / 2), 0) / r.boxes.length;
+        const avgH = r.boxes.reduce((sum, b) => sum + b.h, 0) / r.boxes.length;
+        if (Math.abs(boxCenterY - avgCenterY) < avgH * 0.45) {
+          r.boxes.push(box);
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) {
+        rows.push({
+          rowIndex: rows.length,
+          name: `Row ${rows.length + 1}`,
+          boxes: [box],
+        });
+      }
+    }
+
+    rows.forEach((r, idx) => {
+      r.boxes.sort((a, b) => a.x - b.x);
+      const customName = editorState.rowNames[idx];
+      if (customName && customName.trim()) {
+        r.name = `Row ${idx + 1}: ${customName.trim()} (${r.boxes.length} frames)`;
+      } else {
+        r.name = `Row ${idx + 1} (${r.boxes.length} frames)`;
+      }
+    });
+
+    return rows;
+  });
+
+  // Selected boxes computation
+  const selectedBoxes = computed(() => {
+    if (selectedBoxIds.value.length > 1) {
+      return editorState.boxes
+        .filter(b => selectedBoxIds.value.includes(b.id))
+        .sort((a, b) => {
+          if (Math.abs(a.y - b.y) > Math.min(a.h, b.h) * 0.4) {
+            return a.y - b.y;
+          }
+          return a.x - b.x;
+        });
+    } else if (selectedBoxId.value) {
+      const box = editorState.boxes.find(b => b.id === selectedBoxId.value);
+      if (!box) return [];
+      const enclosed = getEnclosedBoxes(box);
+      if (enclosed.length > 1) {
+        return enclosed.sort((a, b) => a.x - b.x);
+      }
+      return [box];
+    }
+    return [];
+  });
+
   const animationFrames = computed(() => {
     if (slicingMode.value === 'grid' && editorState.gridArea) {
       const { x, y, w, h } = editorState.gridArea;
@@ -248,7 +338,82 @@ export function useImageEditor(t: (key: string) => string) {
       }
       return frames;
     } else if (slicingMode.value === 'custom' && editorState.boxes.length > 0) {
-      return editorState.boxes.map((b, idx) => ({
+      // 1. If target is explicitly 'selected'
+      if (animationTargetRow.value === 'selected') {
+        if (selectedBoxes.value.length > 0) {
+          return selectedBoxes.value.map((b, idx) => ({
+            x: b.x,
+            y: b.y,
+            w: b.w,
+            h: b.h,
+            rowIndex: 0,
+            colIndex: idx,
+            label: `Selected #${idx + 1}`,
+          }));
+        }
+      }
+
+      // 2. If target is a specific row number in customRows
+      if (typeof animationTargetRow.value === 'number') {
+        const rows = customRows.value;
+        if (rows.length > 0) {
+          const validR = Math.max(0, Math.min(animationTargetRow.value, rows.length - 1));
+          const row = rows[validR];
+          if (row && row.boxes.length > 0) {
+            return row.boxes.map((b, idx) => ({
+              x: b.x,
+              y: b.y,
+              w: b.w,
+              h: b.h,
+              rowIndex: validR,
+              colIndex: idx,
+              label: `${row.name} #${idx + 1}`,
+            }));
+          }
+        }
+      }
+
+      // 3. If target is 'all'
+      if (animationTargetRow.value === 'all') {
+        return leafBoxes.value.map((b, idx) => ({
+          x: b.x,
+          y: b.y,
+          w: b.w,
+          h: b.h,
+          rowIndex: 0,
+          colIndex: idx,
+          label: `Asset #${idx + 1}`,
+        }));
+      }
+
+      // 4. Default fallback: if multiple selected boxes exist (e.g. user selected multiple or drawn an enclosing box)
+      if (selectedBoxes.value.length > 1) {
+        return selectedBoxes.value.map((b, idx) => ({
+          x: b.x,
+          y: b.y,
+          w: b.w,
+          h: b.h,
+          rowIndex: 0,
+          colIndex: idx,
+          label: `Selected #${idx + 1}`,
+        }));
+      }
+
+      // If custom rows exist, default to the first row
+      if (customRows.value.length > 0) {
+        const row = customRows.value[0];
+        return row.boxes.map((b, idx) => ({
+          x: b.x,
+          y: b.y,
+          w: b.w,
+          h: b.h,
+          rowIndex: 0,
+          colIndex: idx,
+          label: `${row.name} #${idx + 1}`,
+        }));
+      }
+
+      return leafBoxes.value.map((b, idx) => ({
         x: b.x,
         y: b.y,
         w: b.w,
@@ -381,6 +546,18 @@ export function useImageEditor(t: (key: string) => string) {
             }
           }
         });
+
+        // Highlight active animation frame in custom mode
+        const frame = currentFrame.value;
+        if (frame && frame.w > 0 && frame.h > 0) {
+          ctx.save();
+          ctx.fillStyle = 'rgba(99, 102, 241, 0.22)';
+          ctx.fillRect(frame.x, frame.y, frame.w, frame.h);
+          ctx.lineWidth = 2.5;
+          ctx.strokeStyle = '#6366f1';
+          ctx.strokeRect(frame.x, frame.y, frame.w, frame.h);
+          ctx.restore();
+        }
       } else if (slicingMode.value === 'grid' && editorState.gridArea) {
         // Grid mode drawing
         const box = editorState.gridArea;
@@ -552,6 +729,16 @@ export function useImageEditor(t: (key: string) => string) {
   watch(animationTargetRow, () => {
     currentFrameIndex.value = 0;
     draw();
+  });
+
+  watch(selectedBoxes, (newSel) => {
+    if (slicingMode.value === 'custom') {
+      if (newSel.length > 1) {
+        animationTargetRow.value = 'selected';
+        currentFrameIndex.value = 0;
+        draw();
+      }
+    }
   });
 
   const setupCanvas = (img: HTMLImageElement) => {
@@ -753,6 +940,24 @@ export function useImageEditor(t: (key: string) => string) {
         isMoving.value = true;
         offsetX.value = startX.value - clickedBox.x;
         offsetY.value = startY.value - clickedBox.y;
+
+        // Auto-sync animation target when clicking a box in Custom mode
+        const enclosed = getEnclosedBoxes(clickedBox);
+        if (enclosed.length > 1) {
+          animationTargetRow.value = 'selected';
+          currentFrameIndex.value = 0;
+        } else if (customRows.value.length > 0) {
+          const foundRowIdx = customRows.value.findIndex(r => r.boxes.some(b => b.id === clickedBox.id));
+          if (foundRowIdx !== -1) {
+            if (typeof animationTargetRow.value === 'number') {
+              animationTargetRow.value = foundRowIdx;
+            }
+            const frameInRowIdx = customRows.value[foundRowIdx].boxes.findIndex(b => b.id === clickedBox.id);
+            if (frameInRowIdx !== -1) {
+              currentFrameIndex.value = frameInRowIdx;
+            }
+          }
+        }
       } else {
         selectedBoxId.value = null;
         selectedBoxIds.value = [];
@@ -1736,6 +1941,9 @@ export function useImageEditor(t: (key: string) => string) {
     currentFrameIndex,
     animationFrames,
     currentFrame,
+    customRows,
+    selectedBoxes,
+    leafBoxes,
     togglePlay,
     nextFrame,
     prevFrame,

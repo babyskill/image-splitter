@@ -204,6 +204,7 @@
     "loop": "Animation Loop",
     "static": "Static Frame",
     "targetSequence": "Sequence / Row",
+    "selectedBoxes": "Current Selection",
     "allFrames": "All Frames (Full Sheet)",
     "fps": "Playback Speed (FPS)",
     "frameCounter": "Frame {current} / {total}",
