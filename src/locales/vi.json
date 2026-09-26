@@ -1,4 +1,11 @@
 {
+  "common": {
+    "download": "Tải về",
+    "cancel": "Hủy",
+    "confirm": "Xác nhận",
+    "ok": "Đồng ý",
+    "save": "Lưu"
+  },
   "header": {
     "title": "Cropio-Style AI Asset Splitter",
     "newSession": "Tạo mới",

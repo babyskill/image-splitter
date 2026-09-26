@@ -18,6 +18,11 @@ export function useImageEditor(t: (key: string) => string) {
   const fileInputRef = ref<HTMLInputElement | null>(null);
   const ctxRef = ref<CanvasRenderingContext2D | null>(null);
 
+  const tr = (key: string, fallback: string): string => {
+    const val = t(key);
+    return val && val !== key ? val : fallback;
+  };
+
   // --- Active Tool & Selection ---
   const activeTool = ref<ToolType>('select');
   const selectedBoxId = ref<number | null>(null);
@@ -1589,8 +1594,8 @@ export function useImageEditor(t: (key: string) => string) {
       let fileName = defaultName;
       try {
         const { value } = await ElMessageBox.prompt(promptMsg, promptTitle, {
-          confirmButtonText: t('common.download') || 'Tải về',
-          cancelButtonText: t('common.cancel') || 'Hủy',
+          confirmButtonText: tr('common.download', 'Tải về'),
+          cancelButtonText: tr('common.cancel', 'Hủy'),
           inputValue: defaultName,
           inputPattern: /^[a-zA-Z0-9_\-\s]+$/,
           inputErrorMessage: t('messages.invalidFilename') || 'Tên file không được chứa ký tự đặc biệt',
@@ -1689,8 +1694,8 @@ export function useImageEditor(t: (key: string) => string) {
 
       try {
         const { value } = await ElMessageBox.prompt(promptMsg, promptTitle, {
-          confirmButtonText: t('common.download') || 'Tải về',
-          cancelButtonText: t('common.cancel') || 'Hủy',
+          confirmButtonText: tr('common.download', 'Tải về'),
+          cancelButtonText: tr('common.cancel', 'Hủy'),
           inputValue: fileName || (itemsToExport.length > 1 ? 'row-1' : `asset-${idx + 1}`),
           inputPattern: /^[a-zA-Z0-9_\-\s]+$/,
           inputErrorMessage: t('messages.invalidFilename') || 'Tên file không được chứa ký tự đặc biệt',

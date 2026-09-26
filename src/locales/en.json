@@ -1,4 +1,11 @@
 {
+  "common": {
+    "download": "Download",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "ok": "OK",
+    "save": "Save"
+  },
   "header": {
     "title": "Cropio-Style AI Asset Splitter",
     "newSession": "New Session",
