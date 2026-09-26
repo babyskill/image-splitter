@@ -5,6 +5,9 @@ contextBridge.exposeInMainWorld('ipcApi', {
   sendLanguageChange: (lang: string) => {
     ipcRenderer.send('language-changed', lang);
   },
+  prepareDownload: (fileName: string) => {
+    ipcRenderer.send('prepare-download', fileName);
+  },
 
   // --- Main to Renderer ---
   onUpdateNotAvailable: (callback: () => void) => {

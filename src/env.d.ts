@@ -5,6 +5,7 @@ declare global {
     ipcApi: {
       // Renderer to Main
       sendLanguageChange: (lang: string) => void;
+      prepareDownload?: (fileName: string) => void;
 
       // Main to Renderer
       onUpdateNotAvailable: (callback: () => void) => void;

@@ -137,6 +137,12 @@ const createMenu = (lang: 'en' | 'vi' = 'en') => {
   Menu.setApplicationMenu(menu);
 }
 
+let pendingDownloadFilename = '';
+
+ipcMain.on('prepare-download', (_event, filename: string) => {
+  pendingDownloadFilename = filename;
+});
+
 const createWindow = () => {
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -146,6 +152,19 @@ const createWindow = () => {
       nodeIntegration: false,
       contextIsolation: true,
     },
+  });
+
+  mainWindow.webContents.session.on('will-download', (_event, item) => {
+    let filename = pendingDownloadFilename || item.getFilename();
+    pendingDownloadFilename = '';
+
+    if (!filename || filename === 'Image Splitter.zip' || filename === 'Image Splitter') {
+      const ext = path.extname(item.getFilename()) || '.zip';
+      filename = `assets${ext}`;
+    }
+
+    const savePath = path.join(app.getPath('downloads'), filename);
+    item.setSavePath(savePath);
   });
 
   mainWindow.webContents.setWindowOpenHandler((details) => {

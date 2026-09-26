@@ -1504,6 +1504,35 @@ export function useImageEditor(t: (key: string) => string) {
   });
 
   // --- Export Actions ---
+  const triggerDownload = (blob: Blob, fileName: string) => {
+    // Notify Electron main process if available
+    if (window.ipcApi?.prepareDownload) {
+      window.ipcApi.prepareDownload(fileName);
+    }
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = fileName;
+    a.setAttribute('download', fileName);
+
+    const prevTitle = document.title;
+    // Set document.title so any Chromium / Electron fallback will use fileName instead of "Image Splitter"
+    const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '');
+    document.title = nameWithoutExt;
+
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    // Delay revoking the Object URL to allow Chromium / Electron to initiate downloading
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+      document.title = prevTitle;
+    }, 30000);
+  };
+
   const handleExportRow = async (targetRowIndex?: number) => {
     try {
       if (!editorState.sourceImage) {
@@ -1589,14 +1618,7 @@ export function useImageEditor(t: (key: string) => string) {
       }
 
       const zipBlob = await zip.generateAsync({ type: 'blob' });
-      const url = URL.createObjectURL(zipBlob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${fileName}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      triggerDownload(zipBlob, `${fileName}.zip`);
 
       ElMessage.success(
         t('messages.exportRowSuccess', { name: fileName, count: boxesToExport.length }) ||
@@ -1625,14 +1647,7 @@ export function useImageEditor(t: (key: string) => string) {
         slicingMode.value,
         options
       );
-      const a = document.createElement('a');
-      const url = URL.createObjectURL(zipBlob);
-      a.href = url;
-      a.download = `${exportPrefix.value}-assets.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      triggerDownload(zipBlob, `${exportPrefix.value}-assets.zip`);
       ElMessage.success(t('sidebar.exportSuccess') || 'Tải toàn bộ assets thành công!');
     } catch (error: any) {
       ElMessageBox.alert(error.message, t('messages.exportErrorTitle'), { type: 'error' });
@@ -1697,27 +1712,13 @@ export function useImageEditor(t: (key: string) => string) {
           zip.file(`${fileName}-${i + 1}.${ext}`, itemBlob);
         }
         const zipBlob = await zip.generateAsync({ type: 'blob' });
-        const url = URL.createObjectURL(zipBlob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${fileName}.zip`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        triggerDownload(zipBlob, `${fileName}.zip`);
         ElMessage.success(t('messages.downloadSuccessMulti', { count: itemsToExport.length }) || `Đã tải về ${itemsToExport.length} item dạng ZIP thành công!`);
       } else {
         // Export single item
         const blob = await editorState.exportSingleBox(box, options);
         const ext = exportFormat.value === 'webp' ? 'webp' : 'png';
-        const a = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        a.href = url;
-        a.download = `${fileName}.${ext}`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        triggerDownload(blob, `${fileName}.${ext}`);
         ElMessage.success(t('messages.downloadSuccessSingle', { name: fileName }) || `Đã tải về ${fileName}.${ext} thành công!`);
       }
     } catch (error: any) {
@@ -2018,18 +2019,11 @@ export function useImageEditor(t: (key: string) => string) {
         sizePreset: exportSizePreset.value,
         canvasPadding: canvasPadding.value,
       });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
       const ext = exportFormat.value === 'webp' ? 'webp' : 'png';
       const seqName = animationTargetRow.value === 'all'
         ? 'all'
         : (editorState.rowNames[animationTargetRow.value as number] || `row${(animationTargetRow.value as number) + 1}`);
-      a.download = `${exportPrefix.value}-${seqName}-frame${currentFrameIndex.value + 1}.${ext}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      triggerDownload(blob, `${exportPrefix.value}-${seqName}-frame${currentFrameIndex.value + 1}.${ext}`);
     } catch (err: any) {
       ElMessage.error(err.message || 'Download failed');
     }
