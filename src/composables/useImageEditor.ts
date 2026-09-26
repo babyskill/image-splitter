@@ -877,8 +877,6 @@ export function useImageEditor(t: (key: string) => string) {
       fileInfo.width = img.width;
       fileInfo.height = img.height;
       setupCanvas(img);
-      editorState.clearBoxes();
-      editorState.clearGrid();
       selectedBoxId.value = null;
       selectedBoxIds.value = [];
       isPlaying.value = false;
@@ -889,8 +887,10 @@ export function useImageEditor(t: (key: string) => string) {
       await nextTick();
       fitToScreen();
 
+      // Automatically run auto-detect on new image (animation playback remains paused)
+      await nextTick();
+      reapplyAutoDetect();
       saveHistory();
-      draw();
     };
 
     if (editorState.sourceImage) {
@@ -1498,7 +1498,7 @@ export function useImageEditor(t: (key: string) => string) {
   };
 
   watch(autoDetectPadding, () => {
-    if (autoDetectMode.value === 'padding' && editorState.sourceImage && editorState.boxes.length > 0) {
+    if (autoDetectMode.value === 'padding' && editorState.sourceImage) {
       reapplyAutoDetect();
     }
   });
